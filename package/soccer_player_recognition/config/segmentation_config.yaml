@@ -1,0 +1,19 @@
+memory_bank:
+  feature_dim: 256
+  size: 8
+model_name: sam2
+parameters:
+  confidence_threshold: 0.75
+  image_encoder:
+    checkpoint: sam2_hiera_large.pt
+    type: vit_h
+  input_size:
+  - 1024
+  - 1024
+  iou_threshold: 0.8
+  predictor_type: SAM2Predictor
+prompt_settings:
+  num_points: 4
+  threshold: 0.8
+type: segmentation
+version: 2.0.0

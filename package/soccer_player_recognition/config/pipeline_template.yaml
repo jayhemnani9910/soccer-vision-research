@@ -1,0 +1,27 @@
+description: Processing pipeline template
+ensemble:
+  enabled: false
+  strategy: weighted_average
+  weights:
+  - 0.3
+  - 0.2
+  - 0.5
+output:
+  format: json
+  save_annotations: true
+  save_cropped_players: true
+  save_tracking_results: true
+pipeline_name: '{{PIPELINE_NAME}}'
+steps:
+- config_override: {}
+  enabled: true
+  model: rf_detr
+  name: detection
+- config_override: {}
+  enabled: true
+  model: sam2
+  name: segmentation
+- config_override: {}
+  enabled: true
+  model: resnet
+  name: classification

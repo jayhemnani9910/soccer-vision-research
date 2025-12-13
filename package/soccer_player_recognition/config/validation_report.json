@@ -1,0 +1,116 @@
+{
+  "generated_at": "2025-11-04 12:32:12",
+  "config_directory": "config",
+  "total_files": 11,
+  "files_validated": [
+    {
+      "file_path": "config/classification_config.yaml",
+      "total_issues": 0,
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "issues": []
+    },
+    {
+      "file_path": "config/complete_config.yaml",
+      "total_issues": 0,
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "issues": []
+    },
+    {
+      "file_path": "config/detection_config.yaml",
+      "total_issues": 0,
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "issues": []
+    },
+    {
+      "file_path": "config/model_config.yaml",
+      "total_issues": 0,
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "issues": []
+    },
+    {
+      "file_path": "config/model_registry.yaml",
+      "total_issues": 9,
+      "errors": 9,
+      "warnings": 0,
+      "infos": 0,
+      "issues": [
+        "resnet: Missing required field 'model_name'",
+        "resnet: Missing required field 'input_size'",
+        "resnet: Missing required field 'device'",
+        "rf_detr: Missing required field 'model_name'",
+        "rf_detr: Missing required field 'input_size'",
+        "rf_detr: Missing required field 'device'",
+        "sam2: Missing required field 'model_name'",
+        "sam2: Missing required field 'input_size'",
+        "sam2: Missing required field 'device'"
+      ]
+    },
+    {
+      "file_path": "config/model_template.yaml",
+      "total_issues": 0,
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "issues": []
+    },
+    {
+      "file_path": "config/pipeline_template.yaml",
+      "total_issues": 1,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "issues": [
+        "ensemble weights must be a dictionary"
+      ]
+    },
+    {
+      "file_path": "config/segmentation_config.yaml",
+      "total_issues": 0,
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "issues": []
+    },
+    {
+      "file_path": "config/system_config.yaml",
+      "total_issues": 0,
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "issues": []
+    },
+    {
+      "file_path": "config/system_template.yaml",
+      "total_issues": 0,
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "issues": []
+    },
+    {
+      "file_path": "config/complete_config.json",
+      "total_issues": 0,
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "issues": []
+    }
+  ],
+  "summary": {
+    "total_issues": 10,
+    "errors": 10,
+    "warnings": 0,
+    "infos": 0
+  },
+  "recommendations": [
+    "Please fix configuration errors before deployment."
+  ]
+}

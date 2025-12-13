@@ -1,0 +1,113 @@
+data:
+  auto_cleanup: true
+  cache_dir: cache
+  cleanup_threshold_gb: 10.0
+  data_dir: data
+  dataset_path: data/datasets
+  model_dir: models
+  output_dir: outputs
+  supported_image_formats:
+  - .jpg
+  - .jpeg
+  - .png
+  - .bmp
+  supported_video_formats:
+  - .mp4
+  - .avi
+  - .mov
+ensemble:
+  consensus_threshold: 0.6
+  enabled: true
+  threshold_calibration:
+    method: balanced
+    target_tpr: 0.95
+  voting_strategy: soft
+  weights:
+    resnet: 0.2
+    rf_detr: 0.3
+    sam2: 0.2
+    siglip: 0.3
+logging:
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  level: INFO
+  log_file_path: logs/system.log
+  log_model_summary: true
+  log_performance_metrics: true
+  log_to_file: true
+  log_training_history: true
+models:
+  resnet:
+    architecture: resnet50
+    batch_size: 64
+    device: cuda
+    dropout: 0.5
+    input_size:
+    - 224
+    - 224
+    learning_rate: 0.001
+    model_name: resnet
+    model_path: models/pretrained/resnet/resnet50-0676ba61.pth
+    num_classes: 25
+    num_workers: 8
+  rf_detr:
+    batch_size: 2
+    class_names:
+    - player
+    - ball
+    - referee
+    - goalkeeper
+    confidence_threshold: 0.6
+    device: cuda
+    input_size:
+    - 640
+    - 640
+    model_name: rf-detr
+    model_path: models/pretrained/rf_detr/rf_detr_epoch_20.pth
+    nms_threshold: 0.5
+    num_workers: 4
+    pretrained: true
+  sam2:
+    batch_size: 1
+    confidence_threshold: 0.75
+    device: cuda
+    input_size:
+    - 1024
+    - 1024
+    model_name: sam2
+    model_path: models/pretrained/sam2/sam2_hiera_large.pt
+    num_workers: 2
+    predictor_type: SAM2Predictor
+    use_multimask: true
+  siglip:
+    batch_size: 32
+    device: cuda
+    input_size:
+    - 384
+    - 384
+    model_name: siglip
+    model_path: models/pretrained/siglip/siglip-vit-so400m-14-e384.pt
+    num_player_classes: 25
+    num_workers: 4
+    temperature: 100.0
+performance:
+  cache_size_mb: 512
+  enable_caching: true
+  fuse_conv_bn: true
+  memory_pool_size: 1024
+  remove_dropout_inference: true
+project:
+  author: AI Research Team
+  description: Advanced AI system for soccer player analysis
+  name: Soccer Player Recognition
+  version: 1.0.0
+system:
+  clear_cache_frequency: 10
+  compile_model: false
+  device: cuda
+  device_id: 0
+  gradient_checkpointing: true
+  max_memory_fraction: 0.8
+  mixed_precision: true
+  num_workers: 4
+  persistent_workers: true
+  pin_memory: true

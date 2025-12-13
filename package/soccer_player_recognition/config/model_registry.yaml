@@ -1,0 +1,33 @@
+default_pipeline:
+- detection
+- segmentation
+- classification
+ensemble_models:
+- rf_detr
+- sam2
+- resnet
+models:
+  resnet:
+    config_file: classification_config.yaml
+    description: Residual Networks for Player Classification
+    name: ResNet
+    supported_tasks:
+    - classification
+    - identification
+    type: classification
+  rf_detr:
+    config_file: detection_config.yaml
+    description: Real-time Football Detection with Transformer
+    name: RF-DETR
+    supported_tasks:
+    - detection
+    - tracking
+    type: detection
+  sam2:
+    config_file: segmentation_config.yaml
+    description: Segment Anything Model 2 for video segmentation
+    name: SAM2
+    supported_tasks:
+    - segmentation
+    - tracking
+    type: segmentation

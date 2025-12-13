@@ -1,0 +1,24 @@
+architecture: resnet50
+model_name: resnet
+parameters:
+  dropout: 0.5
+  input_size:
+  - 224
+  - 224
+  num_classes: 25
+pretrained: true
+training:
+  augmentations:
+    random_color_jitter: 0.4
+    random_horizontal_flip: 0.5
+    random_rotation: 15.0
+  batch_size: 64
+  learning_rate: 0.001
+  momentum: 0.9
+  scheduler:
+    gamma: 0.1
+    step_size: 30
+    type: StepLR
+  weight_decay: 0.0001
+type: classification
+version: 1.0.0

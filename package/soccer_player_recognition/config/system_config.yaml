@@ -1,0 +1,47 @@
+created: '2025-11-04 12:32:12'
+description: System configuration for Soccer Player Recognition
+device:
+  clear_cache_frequency: 10
+  compile_model: false
+  device: auto
+  device_id: 0
+  distributed: false
+  gradient_checkpointing: true
+  max_memory_fraction: 0.8
+  mixed_precision: true
+  multi_gpu: false
+  precision: fp16
+  use_cudnn_benchmark: true
+performance:
+  cache_size_mb: 512
+  enable_caching: true
+  fuse_conv_bn: true
+  garbage_collection_threshold: 0.8
+  max_workers: 8
+  memory_pool_size: 1024
+  num_workers: 8
+  persistent_workers: true
+  pin_memory: true
+  prefetch_factor: 2
+  remove_dropout_inference: true
+  use_memory_mapping: true
+runtime:
+  checkpoint_interval: 100
+  continue_on_error: false
+  enable_checkpoints: true
+  inference_timeout: 60
+  max_concurrent_operations: 8
+  max_retries: 3
+  memory_management_strategy: auto
+  mode: inference
+  model_loading_timeout: 300
+  show_progress: true
+  thread_pool_size: 32
+  use_threads: true
+system_info:
+  cpu_count: 32
+  memory_available_gb: 38.65
+  memory_total_gb: 60.54
+  platform: Linux-5.10.134-18.al8.x86_64-x86_64-with-glibc2.36
+  python_version: 3.12.5
+version: 1.0.0

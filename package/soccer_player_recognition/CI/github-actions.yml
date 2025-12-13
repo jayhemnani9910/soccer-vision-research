@@ -1,0 +1,561 @@
+name: Soccer Player Recognition Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+
+jobs:
+  # Run utility tests (lightweight, fast)
+  utils-tests:
+    name: Utils Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov numpy opencv-python-headless
+          pip install -r soccer_player_recognition/requirements.txt
+          pip install -r soccer_player_recognition/sam2_requirements.txt || true
+
+      - name: Run utils tests
+        working-directory: soccer_player_recognition
+        run: |
+          python -m pytest tests/utils_tests.py -v --tb=short --cov=utils --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./soccer_player_recognition/coverage.xml
+          flags: utils
+          name: utils-coverage
+
+  # Run model tests (moderate complexity)
+  model-tests:
+    name: Model Tests
+    runs-on: ubuntu-latest
+    needs: utils-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy opencv-python-headless
+          pip install -r soccer_player_recognition/requirements.txt
+
+      - name: Run model tests
+        working-directory: soccer_player_recognition
+        run: |
+          python -m pytest tests/test_all_models.py -v --tb=short --cov=models --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./soccer_player_recognition/coverage.xml
+          flags: models
+          name: models-coverage
+
+  # Run integration tests (end-to-end)
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: model-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy opencv-python-headless psutil
+          pip install -r soccer_player_recognition/requirements.txt
+
+      - name: Run integration tests
+        working-directory: soccer_player_recognition
+        run: |
+          python -m pytest tests/integration_tests.py -v --tb=short --cov=. --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./soccer_player_recognition/coverage.xml
+          flags: integration
+          name: integration-coverage
+
+  # Run performance tests (GPU required)
+  performance-tests-gpu:
+    name: Performance Tests (GPU)
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies with GPU support
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest torch torchvision --index-url https://download.pytorch.org/whl/cu118
+          pip install numpy opencv-python psutil
+          pip install -r soccer_player_recognition/requirements.txt
+
+      - name: Verify GPU availability
+        working-directory: soccer_player_recognition
+        run: |
+          python -c "
+          import torch
+          print(f'CUDA available: {torch.cuda.is_available()}')
+          if torch.cuda.is_available():
+              print(f'CUDA devices: {torch.cuda.device_count()}')
+              print(f'Current device: {torch.cuda.current_device()}')
+          "
+
+      - name: Run performance tests
+        working-directory: soccer_player_recognition
+        run: |
+          python -m pytest tests/performance_tests.py -v --tb=short -k "not test_gpu_vs_cuda_performance"
+
+      - name: Run GPU-specific performance tests
+        working-directory: soccer_player_recognition
+        run: |
+          python -c "
+          import torch
+          if torch.cuda.is_available():
+              print('Running GPU performance tests...')
+              import subprocess
+              subprocess.run(['python', '-m', 'pytest', 'tests/performance_tests.py', '-v', '-k', 'test_gpu_vs_cuda_performance'])
+          else:
+              print('Skipping GPU tests - no CUDA available')
+          "
+
+  # Run performance tests (CPU only)
+  performance-tests-cpu:
+    name: Performance Tests (CPU)
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy opencv-python-headless psutil
+          pip install -r soccer_player_recognition/requirements.txt
+
+      - name: Run CPU performance tests
+        working-directory: soccer_player_recognition
+        run: |
+          python -m pytest tests/performance_tests.py -v --tb=short -k "not test_gpu"
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-results
+          path: |
+            soccer_player_recognition/tmp/*/
+            soccer_player_recognition/*/benchmark_results.json
+
+  # Cross-platform tests
+  cross-platform-tests:
+    name: Cross-Platform Tests
+    runs-on: ${{ matrix.os }}
+    needs: utils-tests
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+        python-version: ['3.9', '3.10', '3.11']
+      fail-fast: false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest numpy opencv-python
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -r soccer_player_recognition/requirements.txt || true
+
+      - name: Run cross-platform tests
+        working-directory: soccer_player_recognition
+        run: |
+          python -m pytest tests/utils_tests.py -v --tb=short
+
+  # Code quality checks
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort mypy bandit safety
+
+      - name: Run flake8
+        working-directory: soccer_player_recognition
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+
+      - name: Run black
+        working-directory: soccer_player_recognition
+        run: |
+          black --check --diff .
+
+      - name: Run isort
+        working-directory: soccer_player_recognition
+        run: |
+          isort --check-only --diff .
+
+      - name: Run mypy
+        working-directory: soccer_player_recognition
+        run: |
+          mypy . --ignore-missing-imports || true
+
+      - name: Run bandit security check
+        working-directory: soccer_player_recognition
+        run: |
+          bandit -r . -f json -o bandit-report.json || true
+
+      - name: Upload bandit report
+        uses: actions/upload-artifact@v3
+        with:
+          name: bandit-report
+          path: soccer_player_recognition/bandit-report.json
+
+      - name: Run safety check
+        working-directory: soccer_player_recognition
+        run: |
+          safety check --json --output safety-report.json || true
+
+      - name: Upload safety report
+        uses: actions/upload-artifact@v3
+        with:
+          name: safety-report
+          path: soccer_player_recognition/safety-report.json
+
+  # Documentation tests
+  documentation-tests:
+    name: Documentation Tests
+    runs-on: ubuntu-latest
+    needs: utils-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install sphinx sphinx-rtd-theme myst-parser
+          pip install -r soccer_player_recognition/requirements.txt || true
+
+      - name: Check documentation build
+        working-directory: soccer_player_recognition
+        run: |
+          cd docs
+          sphinx-build -W -b html . _build/html
+
+      - name: Test docstring coverage
+        run: |
+          python -c "
+          import ast
+          import os
+          from pathlib import Path
+          
+          def check_docstrings(directory):
+              total_files = 0
+              missing_docstrings = 0
+              
+              for py_file in Path(directory).rglob('*.py'):
+                  if 'test' in str(py_file) or '__pycache__' in str(py_file):
+                      continue
+                  
+                  try:
+                      with open(py_file, 'r') as f:
+                          tree = ast.parse(f.read())
+                      
+                      for node in ast.walk(tree):
+                          if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
+                              total_files += 1
+                              if not ast.get_docstring(node):
+                                  missing_docstrings += 1
+                  except:
+                      continue
+              
+              coverage = ((total_files - missing_docstrings) / total_files * 100) if total_files > 0 else 100
+              print(f'Docstring coverage: {coverage:.1f}% ({total_files - missing_docstrings}/{total_files})')
+              
+              if coverage < 80:
+                  print('Warning: Low docstring coverage')
+          
+          check_docstrings('soccer_player_recognition')
+          "
+
+  # Test with different Python versions
+  python-version-tests:
+    name: Python ${{ matrix.python-version }} Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+      fail-fast: false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest numpy opencv-python-headless
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -r soccer_player_recognition/requirements.txt
+
+      - name: Run tests with Python ${{ matrix.python-version }}
+        working-directory: soccer_player_recognition
+        run: |
+          python -m pytest tests/test_all_models.py::TestModelInstances::test_model_instance_creation -v
+          python -m pytest tests/utils_tests.py::TestConfigLoader::test_config_loader_initialization -v
+
+  # Final summary job
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [utils-tests, model-tests, integration-tests, performance-tests-cpu, cross-platform-tests, code-quality, documentation-tests, python-version-tests]
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Display test summary
+        run: |
+          echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check job status
+          jobs=("utils-tests" "model-tests" "integration-tests" "performance-tests-cpu" "cross-platform-tests" "code-quality" "documentation-tests" "python-version-tests")
+          
+          for job in "${jobs[@]}"; do
+              status="${{ needs.$job.result }}"
+              if [ "$status" = "success" ]; then
+                  echo "- ✅ $job: PASSED" >> $GITHUB_STEP_SUMMARY
+              elif [ "$status" = "failure" ]; then
+                  echo "- ❌ $job: FAILED" >> $GITHUB_STEP_SUMMARY
+              else
+                  echo "- ⚠️ $job: SKIPPED" >> $GITHUB_STEP_SUMMARY
+              fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Coverage Reports" >> $GITHUB_STEP_SUMMARY
+          
+          # Display coverage information if available
+          if [ -f "utils-coverage/coverage.xml" ]; then
+              echo "- Utils coverage available" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f "models-coverage/coverage.xml" ]; then
+              echo "- Models coverage available" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f "integration-coverage/coverage.xml" ]; then
+              echo "- Integration coverage available" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Security Reports" >> $GITHUB_STEP_SUMMARY
+          
+          # Display security report information
+          if [ -f "bandit-report/bandit-report.json" ]; then
+              echo "- Bandit security report available" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -f "safety-report/safety-report.json" ]; then
+              echo "- Safety dependency report available" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All test artifacts are available in the Actions tab." >> $GITHUB_STEP_SUMMARY
+
+  # Performance regression detection
+  performance-regression:
+    name: Performance Regression Check
+    runs-on: ubuntu-latest
+    needs: [performance-tests-cpu]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for comparison
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy opencv-python-headless psutil
+
+      - name: Download previous performance results
+        uses: actions/cache@v3
+        with:
+          path: previous_results
+          key: performance-baseline-${{ github.sha }}
+          restore-keys: |
+            performance-baseline-
+
+      - name: Run performance tests
+        working-directory: soccer_player_recognition
+        run: |
+          python -m pytest tests/performance_tests.py::TestPerformanceRegression::test_baseline_performance -v --tb=short
+
+      - name: Compare performance metrics
+        run: |
+          # This would compare current results with previous baseline
+          echo "Performance regression check would be implemented here"
+          echo "Comparing current metrics with stored baseline..."
+
+      - name: Comment PR with performance results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Performance test results have been generated. Check the Actions tab for detailed results.'
+            })

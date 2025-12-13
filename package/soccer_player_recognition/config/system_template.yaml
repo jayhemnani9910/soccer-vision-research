@@ -1,0 +1,17 @@
+description: System configuration template
+device:
+  device: auto
+  device_id: 0
+  gradient_checkpointing: true
+  max_memory_fraction: 0.8
+  mixed_precision: true
+logging:
+  level: INFO
+  log_file_path: logs/system.log
+  log_to_file: true
+performance:
+  cache_size_mb: 512
+  enable_caching: true
+  num_workers: 4
+  pin_memory: true
+version: 1.0.0

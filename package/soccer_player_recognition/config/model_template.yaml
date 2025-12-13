@@ -1,0 +1,21 @@
+batch_size: 1
+confidence_threshold: 0.5
+config_path: models/pretrained/{{MODEL_NAME}}/config.yaml
+device: auto
+inference:
+  batch_size: 1
+  mixed_precision: true
+input_size:
+- 224
+- 224
+model_name: '{{MODEL_NAME}}'
+model_path: models/pretrained/{{MODEL_NAME}}/model.pth
+num_workers: 4
+pretrained: true
+training:
+  batch_size: 32
+  learning_rate: 0.001
+  num_epochs: 100
+  weight_decay: 0.0001
+type: '{{MODEL_TYPE}}'
+version: 1.0.0

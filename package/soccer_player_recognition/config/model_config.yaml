@@ -1,0 +1,155 @@
+# Model Configuration for Soccer Player Recognition
+# This file contains parameters for all models used in the pipeline
+
+# RF-DETR (Real-time Football Detection)
+rf_detr:
+  model_name: "rf-detr"
+  model_path: "models/pretrained/rf-detr/rf_detr_epoch_20.pth"
+  config_path: "models/pretrained/rf-detr/rf_detr_config.yaml"
+  input_size: [640, 640]
+  confidence_threshold: 0.5
+  nms_threshold: 0.4
+  max_detections: 100
+  device: "cuda"
+  batch_size: 1
+  num_workers: 4
+  class_names:
+    - "player"
+    - "ball"
+    - "referee"
+    - "goalkeeper"
+  pretrained: true
+  freeze_backbone: false
+  learning_rate: 1e-4
+  weight_decay: 1e-4
+  momentum: 0.9
+
+# SAM2 (Segment Anything Model 2)
+sam2:
+  model_name: "sam2"
+  model_path: "models/pretrained/sam2/sam2_hiera_large.pt"
+  config_path: "models/pretrained/sam2/sam2_config.yaml"
+  input_size: [1024, 1024]
+  confidence_threshold: 0.7
+  iou_threshold: 0.8
+  device: "cuda"
+  batch_size: 1
+  num_workers: 2
+  predictor_type: "SAM2Predictor"
+  image_encoder:
+    type: "vit_h"
+    checkpoint: "sam2_hiera_large.pt"
+  prompt_encoder:
+    type: "SAM2PromptEncoder"
+  mask_decoder:
+    type: "SAM2MaskDecoder"
+  memory_bank:
+    size: 8
+    feature_dim: 256
+  # Point and box prompts
+  point_params:
+    num_points: 4
+    threshold: 0.8
+  box_params:
+    iou_threshold: 0.8
+    stability_score_threshold: 0.7
+
+# SigLIP (Sigmoid Linear projections)
+siglip:
+  model_name: "siglip"
+  model_path: "models/pretrained/siglip/siglip-vit-so400m-14-e384.pt"
+  config_path: "models/pretrained/siglip/siglip_config.yaml"
+  input_size: [384, 384]
+  device: "cuda"
+  batch_size: 32
+  num_workers: 4
+  # Vision transformer parameters
+  vision_model:
+    type: "ViT"
+    image_size: 384
+    patch_size: 14
+    num_layers: 28
+    num_heads: 16
+    hidden_size: 1152
+    mlp_size: 4304
+    dropout: 0.0
+    attention_dropout: 0.0
+  # Text model parameters
+  text_model:
+    type: "CLIP"
+    context_length: 64
+    vocab_size: 49408
+    transformer_width: 512
+    transformer_heads: 8
+    transformer_layers: 12
+  # Training parameters
+  temperature: 100.0
+  use_softmax: true
+  pretrained: true
+  freeze_vision: false
+  freeze_text: false
+  # Player classification parameters
+  num_player_classes: 25
+  text_prompts:
+    - "player number {num} {team}"
+    - "football player {num} from {team}"
+    - "soccer player {num} wearing {color} jersey"
+
+# ResNet (Player classification)
+resnet:
+  model_name: "resnet"
+  model_path: "models/pretrained/resnet/resnet50-0676ba61.pth"
+  config_path: "models/pretrained/resnet/resnet_config.yaml"
+  input_size: [224, 224]
+  device: "cuda"
+  batch_size: 64
+  num_workers: 8
+  # ResNet architecture parameters
+  architecture: "resnet50"
+  pretrained: true
+  freeze_features: false
+  num_classes: 25  # Number of unique players
+  dropout: 0.5
+  # Training parameters
+  learning_rate: 1e-3
+  weight_decay: 1e-4
+  momentum: 0.9
+  scheduler:
+    type: "StepLR"
+    step_size: 30
+    gamma: 0.1
+  # Data augmentation
+  augmentations:
+    random_rotation: 15
+    random_color_jitter: 0.4
+    random_gaussian_blur: 0.1
+    random_horizontal_flip: 0.5
+
+# General model settings
+general:
+  device: "cuda"
+  mixed_precision: true
+  compile_model: false
+  gradient_checkpointing: true
+  # Performance settings
+  pin_memory: true
+  persistent_workers: true
+  # Memory management
+  max_memory_fraction: 0.8
+  clear_cache_frequency: 10
+  # Logging
+  log_model_summary: true
+  save_training_history: true
+
+# Ensemble settings
+ensemble:
+  enabled: false
+  voting_strategy: "soft"  # "soft", "hard", "majority"
+  weights:
+    rf_detr: 0.3
+    sam2: 0.2
+    siglip: 0.3
+    resnet: 0.2
+  threshold_calibration:
+    method: "tpr"  # "fpr", "tpr", "balanced"
+    target_tpr: 0.95

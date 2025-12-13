@@ -1,0 +1,80 @@
+# Development and Testing Dependencies
+# This file lists all dependencies needed for development, testing, and CI
+
+# Core testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-xdist>=3.0.0  # For parallel test execution
+pytest-timeout>=2.0.0  # For test timeouts
+pytest-html>=3.1.0  # For HTML test reports
+pytest-mock>=3.10.0  # For mocking in tests
+pytest-benchmark>=4.0.0  # For performance benchmarking
+pytest-sugar>=0.9.0  # For better test output
+
+# Code quality and linting
+flake8>=6.0.0
+black>=22.0.0
+isort>=5.0.0
+mypy>=1.0.0
+bandit>=1.7.0  # Security linting
+safety>=2.0.0  # Dependency vulnerability checking
+
+# Documentation
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.0.0
+myst-parser>=0.18.0  # For Markdown documentation
+
+# Development utilities
+pre-commit>=3.0.0
+tox>=4.0.0  # For testing multiple Python versions
+coverage>=7.0.0  # For code coverage reports
+
+# Performance monitoring (already in main requirements but included for testing)
+psutil>=5.9.0
+
+# Additional testing utilities
+factory-boy>=3.2.0  # For test data generation
+responses>=0.22.0  # For mocking HTTP requests
+pytest-asyncio>=0.21.0  # For async testing
+pytest-clarity>=1.0.0  # For clearer assertion failures
+
+# Jupyter for development (optional)
+jupyter>=1.0.0
+ipywidgets>=8.0.0  # For interactive widgets
+
+# Memory profiling (for performance tests)
+memory-profiler>=0.60.0
+py-spy>=0.3.0  # For sampling profiler
+
+# GPU testing utilities (optional)
+# torch-tb-profiler>=0.4.0  # For PyTorch profiling
+
+# Additional image processing for tests
+Pillow>=9.0.0
+
+# Video processing for tests
+imageio>=2.22.0
+imageio-ffmpeg>=0.4.0
+
+# YAML processing for tests
+PyYAML>=6.0
+
+# Scientific computing for tests
+scipy>=1.9.0
+scikit-learn>=1.1.0
+
+# Type checking stubs (optional)
+types-requests>=2.28.0
+types-PyYAML>=6.0.0
+types-psutil>=5.9.0
+
+# Build tools
+build>=0.8.0
+twine>=4.0.0  # For publishing to PyPI
+
+# Debugging tools
+pdb++>=0.10.0  # Enhanced debugger
+ipdb>=0.13.0   # IPython debugger
+
+# Git hooks and pre-commit checks
+pre-commit-hooks>=4.4.0

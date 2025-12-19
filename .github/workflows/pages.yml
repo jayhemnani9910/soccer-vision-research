@@ -1,0 +1,131 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build site
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf site
+          mkdir -p site
+
+          if [[ -f demo/index.html ]]; then
+            rsync -a --delete --exclude ".git" demo/ site/
+          elif [[ -f docs/index.html ]]; then
+            rsync -a --delete --exclude ".git" docs/ site/
+          elif [[ -f index.html ]]; then
+            rsync -a --delete \
+              --exclude ".git" \
+              --exclude ".github" \
+              --exclude "node_modules" \
+              --exclude "venv" \
+              --exclude ".venv" \
+              --exclude "__pycache__" \
+              --exclude "dist" \
+              --exclude "out" \
+              --exclude "site" \
+              ./ site/
+          elif [[ -f project.ipynb ]]; then
+            python -m pip install --upgrade pip
+            python -m pip install nbconvert
+            python -m jupyter nbconvert --to html project.ipynb --output index.html --output-dir site
+          elif [[ -f README.md ]]; then
+            python -m pip install --upgrade pip
+            python -m pip install markdown
+            python - <<'PY'
+import pathlib
+import markdown
+
+readme_path = pathlib.Path('README.md')
+md = readme_path.read_text(encoding='utf-8')
+body = markdown.markdown(md, extensions=['fenced_code', 'tables', 'toc'])
+
+html = f'''<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{readme_path.parent.name}</title>
+  <style>
+    :root {{ color-scheme: light dark; }}
+    body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; }}
+    main {{ max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; line-height: 1.6; }}
+    pre {{ overflow-x: auto; padding: 12px; border-radius: 8px; background: rgba(127,127,127,0.15); }}
+    code {{ padding: 2px 4px; border-radius: 6px; background: rgba(127,127,127,0.15); }}
+    a {{ color: inherit; }}
+    img {{ max-width: 100%; height: auto; }}
+  </style>
+</head>
+<body>
+  <main class="markdown-body">
+    {body}
+  </main>
+</body>
+</html>'''
+
+pathlib.Path('site').mkdir(exist_ok=True)
+pathlib.Path('site/index.html').write_text(html, encoding='utf-8')
+PY
+          else
+            cat > site/index.html <<'HTML'
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Project</title>
+  <style>body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;max-width:960px;margin:40px auto;padding:0 16px;line-height:1.6}</style>
+</head>
+<body>
+  <h1>Project</h1>
+  <p>No demo content found.</p>
+</body>
+</html>
+HTML
+          fi
+
+          touch site/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

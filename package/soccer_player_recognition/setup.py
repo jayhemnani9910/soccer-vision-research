@@ -86,13 +86,6 @@ setup(
             "seaborn>=0.12.0",
         ],
     },
-    entry_points={
-        "console_scripts": [
-            "soccer-recognition=soccer_player_recognition.cli:main",
-            "soccer-detect=soccer_player_recognition.detection.run_detection",
-            "soccer-identify=soccer_player_recognition.identification.run_identification",
-        ],
-    },
     include_package_data=True,
     package_data={
         "soccer_player_recognition": [

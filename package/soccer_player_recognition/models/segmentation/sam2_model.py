@@ -86,6 +86,8 @@ class SAM2Model(nn.Module):
         """
         super().__init__()
         
+        if device.startswith("cuda") and not torch.cuda.is_available():
+            device = "cpu"
         self.device = device
         self.memory_mode = memory_mode
         self.max_memory_frames = max_memory_frames

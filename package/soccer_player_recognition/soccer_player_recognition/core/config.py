@@ -49,6 +49,7 @@ class ModelConfig:
 @dataclass
 class DetectionConfig(ModelConfig):
     """Configuration for RF-DETR detection model."""
+    name: str = "rf_detr"
     model_type: str = "detection"
     
     # RF-DETR specific parameters
@@ -86,6 +87,7 @@ class DetectionConfig(ModelConfig):
 @dataclass
 class SegmentationConfig(ModelConfig):
     """Configuration for SAM2 segmentation model."""
+    name: str = "sam2"
     model_type: str = "segmentation"
     
     # SAM2 specific parameters
@@ -120,6 +122,7 @@ class SegmentationConfig(ModelConfig):
 @dataclass
 class IdentificationConfig(ModelConfig):
     """Configuration for SigLIP identification model."""
+    name: str = "siglip"
     model_type: str = "identification"
     
     # SigLIP specific parameters
@@ -159,6 +162,7 @@ class IdentificationConfig(ModelConfig):
 @dataclass
 class ClassificationConfig(ModelConfig):
     """Configuration for ResNet classification model."""
+    name: str = "resnet"
     model_type: str = "classification"
     
     # ResNet specific parameters
@@ -555,8 +559,7 @@ class Config:
             ),
             classification_config=ClassificationConfig(
                 model_name="resnet18",
-                batch_size=2,
-                debug_mode=True
+                batch_size=2
             ),
             fusion_config=FusionConfig(
                 strategy="majority_voting",

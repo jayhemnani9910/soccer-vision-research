@@ -23,17 +23,32 @@ try:
     from soccer_player_recognition.core.results import DetectionResult, SegmentationResult, IdentificationResult
     from utils.performance_monitor import PerformanceMonitor
     REAL_MODELS_AVAILABLE = True
-    print("✅ Real AI models imported successfully!")
+    print("✅ Core modules imported; will try to load real AI models")
 except ImportError as e:
     print(f"⚠️  Could not import real models: {e}")
     print("🔄 Using enhanced simulation mode...")
     REAL_MODELS_AVAILABLE = False
+
+REAL_MODEL_NAMES = {
+    'detection': 'RF-DETR',
+    'segmentation': 'SAM2',
+    'identification': 'SigLIP',
+    'classification': 'ResNet'
+}
+SIMULATION_NAMES = {
+    'detection': 'Enhanced Edge Detection',
+    'segmentation': 'Color-based Analysis',
+    'identification': 'Position Tracking',
+    'classification': 'Pattern Recognition'
+}
+
 
 class RealAIProcessor:
     """Process video with real AI models when available, enhanced simulation otherwise."""
     
     def __init__(self):
         self.frame_count = 0
+        self.real_models_ran = set()  # stages where a real model actually ran
         self.performance_monitor = PerformanceMonitor() if REAL_MODELS_AVAILABLE else None
         
     def process_video(self, video_path):
@@ -42,7 +57,7 @@ class RealAIProcessor:
         print("🤖 REAL AI Soccer Player Recognition")
         print("=" * 60)
         print(f"📹 Processing: {video_path}")
-        print(f"🧠 Mode: {'REAL AI MODELS' if REAL_MODELS_AVAILABLE else 'ENHANCED SIMULATION'}")
+        print(f"🧠 Mode: {'TRY REAL AI MODELS' if REAL_MODELS_AVAILABLE else 'ENHANCED SIMULATION'}")
         
         # Open video
         cap = cv2.VideoCapture(video_path)
@@ -146,6 +161,7 @@ class RealAIProcessor:
                     print("   📡 Step 1: RF-DETR Object Detection...")
                     if detector is not None:
                         detection_result = detector.detect(frame)
+                        self.real_models_ran.add('detection')
                         print(f"      ✅ Detected {len(detection_result.detections)} objects")
                     else:
                         # Fallback to enhanced simulation
@@ -156,6 +172,7 @@ class RealAIProcessor:
                     print("   ✂️  Step 2: SAM2 Segmentation...")
                     if segmenter is not None and hasattr(detection_result, 'detections'):
                         segmentation_result = segmenter.segment(frame, detection_result.detections)
+                        self.real_models_ran.add('segmentation')
                         print(f"      ✅ Generated {len(segmentation_result.masks)} player masks")
                     else:
                         # Fallback simulation
@@ -166,6 +183,7 @@ class RealAIProcessor:
                     print("   👤 Step 3: SigLIP Player Identification...")
                     if identifier is not None and hasattr(detection_result, 'detections'):
                         identification_result = identifier.identify_players(frame, detection_result.detections)
+                        self.real_models_ran.add('identification')
                         print(f"      ✅ Identified {len(identification_result.identifications)} players")
                     else:
                         # Fallback simulation
@@ -176,6 +194,7 @@ class RealAIProcessor:
                     print("   🏷️  Step 4: ResNet Classification...")
                     if classifier is not None and hasattr(detection_result, 'detections'):
                         classification_result = classifier.classify_players(frame, detection_result.detections)
+                        self.real_models_ran.add('classification')
                         print(f"      ✅ Classified {len(classification_result.classifications)} players")
                     else:
                         # Fallback simulation
@@ -408,8 +427,17 @@ class RealAIProcessor:
         
         print("\n📊 GENERATING COMPREHENSIVE REPORT...")
         
+        # Report what actually ran, not what was imported
+        used = self.real_models_ran
+        if len(used) == len(REAL_MODEL_NAMES):
+            mode = 'REAL_AI'
+        elif used:
+            mode = 'PARTIAL_AI'
+        else:
+            mode = 'ENHANCED_SIMULATION'
+        
         report = {
-            'processing_mode': 'REAL_AI' if REAL_MODELS_AVAILABLE else 'ENHANCED_SIMULATION',
+            'processing_mode': mode,
             'video_path': str(video_path),
             'total_frames': total_frames,
             'processed_frames': len(processing_times),
@@ -422,15 +450,13 @@ class RealAIProcessor:
                 'processing_fps': len(processing_times) / np.sum(processing_times) if processing_times else 0
             },
             'ai_models_used': {
-                'detection': 'RF-DETR' if REAL_MODELS_AVAILABLE else 'Enhanced Edge Detection',
-                'segmentation': 'SAM2' if REAL_MODELS_AVAILABLE else 'Color-based Analysis',
-                'identification': 'SigLIP' if REAL_MODELS_AVAILABLE else 'Position Tracking',
-                'classification': 'ResNet' if REAL_MODELS_AVAILABLE else 'Pattern Recognition'
+                stage: REAL_MODEL_NAMES[stage] if stage in used else SIMULATION_NAMES[stage]
+                for stage in REAL_MODEL_NAMES
             },
             'analysis_summary': {
                 'frames_analyzed': len(processing_times),
-                'analysis_quality': 'REAL_AI_INFERENCE' if REAL_MODELS_AVAILABLE else 'ENHANCED_SIMULATION',
-                'confidence_level': 'HIGH' if REAL_MODELS_AVAILABLE else 'MEDIUM'
+                'analysis_quality': 'REAL_AI_INFERENCE' if mode == 'REAL_AI' else mode,
+                'confidence_level': 'HIGH' if mode == 'REAL_AI' else 'MEDIUM'
             }
         }
         

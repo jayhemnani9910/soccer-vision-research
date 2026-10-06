@@ -21,9 +21,7 @@ import json
 import pickle
 import os
 
-from ....utils.logger import get_logger
-
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -183,6 +181,7 @@ class TextTransformer(nn.Module):
         self.norm = nn.LayerNorm(config.text_embed_dim, eps=1e-6)
         
     def forward(self, x):
+        x = self.token_embedding(x)
         x = x + self.pos_embed
         
         for block in self.blocks:

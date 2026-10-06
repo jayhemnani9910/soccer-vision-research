@@ -17,7 +17,7 @@ import logging
 from pathlib import Path
 
 # Add the project root to Python path
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Set up logging
@@ -32,7 +32,7 @@ def test_resnet_model():
     
     try:
         # Import the ResNet model classes
-        from soccer_player_recognition.models.classification.resnet_model import ResNetPlayerClassifier, PlayerRecognitionModel
+        from models.classification.resnet_model import ResNetPlayerClassifier, PlayerRecognitionModel
         
         # Test 1: Create ResNet model
         logger.info("Test 1: Creating ResNet Player Classifier...")
@@ -101,7 +101,7 @@ def test_jersey_recognizer():
     
     try:
         # Import jersey recognition classes
-        from soccer_player_recognition.models.classification.jersey_recognizer import JerseyNumberExtractor, JerseyRecognizer
+        from models.classification.jersey_recognizer import JerseyNumberExtractor, JerseyRecognizer
         
         # Test 1: Create jersey extractor
         logger.info("Test 1: Creating Jersey Number Extractor...")
@@ -166,7 +166,7 @@ def test_resnet_utils():
     
     try:
         # Import utility classes
-        from soccer_player_recognition.utils.resnet_utils import (
+        from utils.resnet_utils import (
             ResNetPreprocessor, 
             ResNetFeatureExtractor, 
             ResNetDatasetProcessor,
@@ -259,9 +259,9 @@ def test_integration():
     
     try:
         # Import all classes
-        from soccer_player_recognition.models.classification.resnet_model import PlayerRecognitionModel
-        from soccer_player_recognition.models.classification.jersey_recognizer import JerseyRecognizer
-        from soccer_player_recognition.utils.resnet_utils import ResNetPreprocessor
+        from models.classification.resnet_model import PlayerRecognitionModel
+        from models.classification.jersey_recognizer import JerseyRecognizer
+        from utils.resnet_utils import ResNetPreprocessor
         
         logger.info("Creating integrated player recognition system...")
         
@@ -321,7 +321,7 @@ def test_integration():
         return False
 
 
-def save_demo_results():
+def save_demo_results(test_results):
     """Save demo results to files."""
     logger.info("\\n" + "=" * 60)
     logger.info("Saving Demo Results")
@@ -347,7 +347,7 @@ def save_demo_results():
                     'ResNetModelEvaluator'
                 ]
             },
-            'test_results': 'All tests completed successfully',
+            'test_results': {name: 'passed' if ok else 'failed' for name, ok in test_results.items()},
             'features': [
                 'Player classification using ResNet',
                 'Jersey number recognition with OCR',
@@ -393,7 +393,7 @@ def main():
     test_results['integration'] = test_integration()
     
     # Save results
-    save_demo_results()
+    save_demo_results(test_results)
     
     # Summary
     logger.info("\\n" + "=" * 80)

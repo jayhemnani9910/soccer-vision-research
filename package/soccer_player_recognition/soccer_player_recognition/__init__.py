@@ -26,58 +26,27 @@ __author__ = "AI Development Team"
 __email__ = "ai@example.com"
 __license__ = "MIT"
 
-# Import main classes
+# Import main classes (only modules that exist in this package)
 from .core import PlayerRecognizer
-from .models.detection.rf_detr_model import RF_DETRModel as DetectionEngine
-from .models.identification.siglip_model import SigLIPModel as IdentificationEngine
-from .models.classification.resnet_model import ResNetModel as ClassificationEngine
-from .models.segmentation.sam2_model import SAM2Model as SegmentationEngine
-from .video import VideoProcessor, StreamProcessor
-
-# Import utilities
-from .utils import (
-    load_config,
-    save_results,
-    visualize_results,
-    create_output_dirs,
-    validate_input,
-    get_device_info
-)
-
-# Import datatypes
-from .datatypes import (
+from .core.results import (
     DetectionResult,
     IdentificationResult,
-    TrackingResult,
-    ClassificationResult,
-    PlayerProfile
+    SegmentationResult,
+    TrackingResult
 )
+from .models.identification.siglip_model import SigLIPModel as IdentificationEngine
 
 __all__ = [
     # Core classes
     "PlayerRecognizer",
-    "DetectionEngine",  # RF-DETR Model
     "IdentificationEngine",  # SigLIP Model
-    "ClassificationEngine",  # ResNet Model
-    "SegmentationEngine",  # SAM2 Model
-    "VideoProcessor",
-    "StreamProcessor",
-    
-    # Utility functions
-    "load_config",
-    "save_results", 
-    "visualize_results",
-    "create_output_dirs",
-    "validate_input",
-    "get_device_info",
-    
+
     # Data types
     "DetectionResult",
-    "IdentificationResult", 
+    "IdentificationResult",
+    "SegmentationResult",
     "TrackingResult",
-    "ClassificationResult",
-    "PlayerProfile",
-    
+
     # Version info
     "__version__",
     "__author__",

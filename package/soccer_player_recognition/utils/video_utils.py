@@ -124,7 +124,7 @@ class VideoProcessor:
         frame_normalized = frame_rgb.astype(np.float32) / 255.0
         
         # Apply normalization
-        frame_normalized = (frame_normalized - mean) / std
+        frame_normalized = (frame_normalized - np.asarray(mean, dtype=np.float32)) / np.asarray(std, dtype=np.float32)
         
         return frame_normalized
     

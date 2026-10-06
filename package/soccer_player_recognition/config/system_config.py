@@ -716,7 +716,7 @@ class SystemConfigManager:
             
             # Check device settings
             if config.device.device == DeviceType.CUDA:
-                if not torch.cuda.is_available():
+                if not self.auto_detected_info.get("cuda_available", False):
                     issues.append("CUDA device selected but not available")
             
             # Check memory settings
@@ -767,7 +767,8 @@ class SystemConfigManager:
         
         # CPU optimization
         cpu_count = self.auto_detected_info.get("cpu_count", 4)
-        optimized.performance.num_workers = min(cpu_count, 8)
+        cpu_cap = min(cpu_count, 8)
+        optimized.performance.num_workers = min(cpu_cap, optimized.performance.num_workers) if memory_gb < 8 else cpu_cap
         optimized.runtime.thread_pool_size = min(cpu_count, 8)
         
         self.logger.info("Configuration optimized for system capabilities")

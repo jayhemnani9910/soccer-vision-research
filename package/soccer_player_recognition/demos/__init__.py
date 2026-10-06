@@ -23,7 +23,7 @@ try:
     from .single_model_demo import SingleModelDemo
     from .real_time_demo import RealTimeDemo
     from .benchmark_demo import BenchmarkDemo
-except ImportError:
+except Exception:
     # Handle cases where modules might not be available
     CompleteSystemDemo = None
     SingleModelDemo = None

@@ -2,7 +2,9 @@
 """
 Simple YouTube Video Processor for Soccer Player Recognition
 
-Processes video without complex dependencies to demonstrate functionality.
+DEMO ONLY: this script runs no AI models. Player and ball counts and the
+boxes drawn on frames are random demo data (only the green-field ratio is
+measured from the video). Do not treat its output as detection results.
 """
 
 import cv2
@@ -25,6 +27,7 @@ class SimpleSoccerProcessor:
         
         print("🎬 Soccer Player Recognition - YouTube Video Analysis")
         print("=" * 60)
+        print("⚠️  DEMO MODE: no AI models run. Player/ball counts and boxes are random demo data.")
         print(f"📹 Processing: {video_path}")
         
         # Open video
@@ -67,6 +70,8 @@ class SimpleSoccerProcessor:
                 # Analyze frame
                 analysis = self.analyze_frame(frame)
                 processing_time = time.time() - start_time
+                self.player_detections.append(int(analysis['players']))
+                self.ball_detections.append(int(analysis['ball']))
                 processing_times.append(processing_time)
                 
                 # Create annotated frame
@@ -177,6 +182,7 @@ class SimpleSoccerProcessor:
         fps_processing = 1.0 / avg_processing_time if avg_processing_time > 0 else 0
         
         report = {
+            'data_source': 'random demo data (no AI models run)',
             'video_analysis': {
                 'total_frames': total_frames,
                 'frames_processed': frames_processed,

@@ -7,6 +7,7 @@ evaluation for video sequences.
 """
 
 import torch
+import torch.nn.functional as F
 import numpy as np
 from typing import List, Dict, Optional, Tuple, Any, Set
 from dataclasses import dataclass
@@ -164,7 +165,7 @@ class SAM2Tracker:
             binary_mask = (mask > self.config.min_confidence).float()
             
             # Compute bounding box from mask
-            bbox = self._mask_to_bbox(binary_mask.squeeze(0))
+            bbox = self._mask_to_bbox(binary_mask.squeeze())
             
             # Extract features for appearance matching
             features = self._extract_features(image, mask)
@@ -292,25 +293,21 @@ class SAM2Tracker:
         track_ids = list(self.active_tracks.keys())
         cost_matrix = self._build_cost_matrix(detections, track_ids)
         
-        # Solve assignment problem
-        detection_indices = list(range(len(detections)))
-        track_indices = list(range(len(track_ids)))
+        # Solve assignment problem (cost matrix is [num_tracks, num_detections])
+        track_indices, detection_indices = linear_sum_assignment(cost_matrix)
         
-        if len(cost_matrix) > 0:
-            detection_indices, track_indices = linear_sum_assignment(cost_matrix)
-        
-        # Filter valid matches
+        # Filter valid matches: require enough box overlap with the track
         matches = []
-        unmatched_detections = set(detection_indices)
-        unmatched_tracks = set(track_indices)
+        unmatched_detections = set(range(len(detections)))
+        unmatched_tracks = set(range(len(track_ids)))
         
-        for det_idx, track_idx in zip(detection_indices, track_indices):
-            if track_idx < len(cost_matrix) and det_idx < len(cost_matrix[track_idx]):
-                cost = cost_matrix[track_idx, det_idx]
-                if cost < self.config.max_distance:
-                    matches.append((det_idx, track_idx))
-                    unmatched_detections.discard(det_idx)
-                    unmatched_tracks.discard(track_idx)
+        for track_idx, det_idx in zip(track_indices, detection_indices):
+            track = self.active_tracks[track_ids[track_idx]]
+            iou = 1.0 - self._bbox_cost(track, detections[det_idx])
+            if iou >= self.config.iou_threshold:
+                matches.append((det_idx, track_idx))
+                unmatched_detections.discard(det_idx)
+                unmatched_tracks.discard(track_idx)
         
         return matches, list(unmatched_detections), list(unmatched_tracks)
     

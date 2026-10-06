@@ -293,10 +293,12 @@ class ResNetFeatureExtractor:
     def _get_feature_dimension(self) -> int:
         """Get feature dimension for the specified layer."""
         try:
+            # fc.in_features is the layer4/avgpool width (512 for ResNet-18/34, 2048 for 50+);
+            # each earlier stage has half the channels of the next one.
             if self.layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
-                return 2048  # ResNet feature dimension
+                return self.model.fc.in_features // 2 ** (4 - int(self.layer_name[-1]))
             elif self.layer_name == 'avgpool':
-                return 2048
+                return self.model.fc.in_features
             elif 'conv' in self.layer_name:
                 return 512
             else:
@@ -419,20 +421,6 @@ class ResNetFeatureExtractor:
                 plt.title('Feature Activation Heatmap')
                 plt.xlabel('Feature Dimension')
                 plt.ylabel('Sample Index')
-                
-                if save_path:
-                    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-                    plt.close()
-                else:
-                    # Convert to numpy array
-                    import io
-                    buf = io.BytesIO()
-                    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
-                    plt.close()
-                    
-                    buf.seek(0)
-                    image = Image.open(buf)
-                    return np.array(image)
             
             elif features.dim() == 4:
                 # 4D feature maps - show first few channels
@@ -454,20 +442,22 @@ class ResNetFeatureExtractor:
                 
                 plt.suptitle('Feature Maps Visualization')
                 plt.tight_layout()
-                
-                if save_path:
-                    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-                    plt.close()
-                else:
-                    # Convert to numpy array
-                    import io
-                    buf = io.BytesIO()
-                    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
-                    plt.close()
-                    
-                    buf.seek(0)
-                    image = Image.open(buf)
-                    return np.array(image)
+            
+            else:
+                raise ValueError(f"Expected 2D or 4D features, got {features.dim()}D")
+            
+            if save_path:
+                plt.savefig(save_path, dpi=150, bbox_inches='tight')
+            
+            # Convert to numpy array
+            import io
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+            plt.close()
+            
+            buf.seek(0)
+            image = Image.open(buf)
+            return np.array(image)
             
         except Exception as e:
             logger.error(f"Error visualizing features: {e}")
@@ -585,6 +575,8 @@ class ResNetDatasetProcessor:
                             if isinstance(label, torch.Tensor):
                                 label = label.item()
                             stats['class_distribution'][label] = stats['class_distribution'].get(label, 0) + 1
+                        else:
+                            image = sample
                         
                         if isinstance(image, torch.Tensor):
                             # Convert tensor to numpy for analysis

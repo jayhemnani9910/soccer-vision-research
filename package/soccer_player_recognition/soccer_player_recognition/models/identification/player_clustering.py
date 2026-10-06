@@ -34,9 +34,8 @@ import json
 import pickle
 
 from .siglip_model import SigLIPPlayerIdentification, create_siglip_model
-from ....utils.logger import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -163,6 +162,9 @@ class PlayerClusterer:
             return self.config.n_clusters or 0
         
         max_clusters = min(self.config.max_clusters, len(embeddings) - 1)
+        if max_clusters < 2:
+            logger.warning(f"Too few players ({len(embeddings)}) to search cluster counts, using 1")
+            return 1
         
         if method == "silhouette":
             scores = []
@@ -171,7 +173,7 @@ class PlayerClusterer:
             for n_clusters in cluster_range:
                 if self.config.algorithm == "kmeans":
                     clusterer = KMeans(n_clusters=n_clusters, random_state=self.config.random_state)
-                elif self.config.algorithm == "agglomerative":
+                elif self.config.algorithm in ("agglomerative", "hierarchical"):
                     clusterer = AgglomerativeClustering(n_clusters=n_clusters)
                 else:
                     continue
@@ -189,7 +191,7 @@ class PlayerClusterer:
             for n_clusters in cluster_range:
                 if self.config.algorithm == "kmeans":
                     clusterer = KMeans(n_clusters=n_clusters, random_state=self.config.random_state)
-                elif self.config.algorithm == "agglomerative":
+                elif self.config.algorithm in ("agglomerative", "hierarchical"):
                     clusterer = AgglomerativeClustering(n_clusters=n_clusters)
                 else:
                     continue
@@ -284,7 +286,8 @@ class PlayerClusterer:
         valid_indices = labels != -1 if self.config.algorithm == "dbscan" else labels >= 0
         
         # Compute clustering quality metrics
-        if len(np.unique(labels[valid_indices])) > 1:
+        n_labels = len(np.unique(labels[valid_indices]))
+        if 1 < n_labels < int(np.sum(valid_indices)):
             self.silhouette_score = silhouette_score(embeddings_scaled[valid_indices], labels[valid_indices])
             self.calinski_harabasz_score = calinski_harabasz_score(embeddings_scaled[valid_indices], labels[valid_indices])
             self.davies_bouldin_score = davies_bouldin_score(embeddings_scaled[valid_indices], labels[valid_indices])
@@ -296,7 +299,8 @@ class PlayerClusterer:
         results = self._format_clustering_results(player_names, labels)
         
         logger.info(f"Clustering completed. Found {len(np.unique(labels[valid_indices]))} clusters")
-        logger.info(f"Silhouette Score: {self.silhouette_score:.3f}")
+        if self.silhouette_score is not None:
+            logger.info(f"Silhouette Score: {self.silhouette_score:.3f}")
         
         return results
     
@@ -327,11 +331,10 @@ class PlayerClusterer:
             if len(players) > 1:
                 cluster_indices = [i for i, p in enumerate(player_names) if p in players]
                 cluster_similarities = []
-                for i in cluster_indices:
-                    for j in cluster_indices[i+1:], cluster_indices:
-                        if i < j:
-                            sim = self.similarity_matrix[i, j]
-                            cluster_similarities.append(sim)
+                for a, i in enumerate(cluster_indices):
+                    for j in cluster_indices[a+1:]:
+                        sim = self.similarity_matrix[i, j]
+                        cluster_similarities.append(sim)
                 
                 if cluster_similarities:
                     avg_similarity = np.mean(cluster_similarities)
@@ -509,7 +512,8 @@ class PlayerClusterer:
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.tight_layout()
         
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        if os.path.dirname(output_path):
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.close()
         
@@ -535,7 +539,8 @@ class PlayerClusterer:
             'cluster_stats': results['cluster_stats']
         }
         
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        if os.path.dirname(output_path):
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
         with open(output_path, 'w') as f:
             json.dump(serializable_results, f, indent=2)
@@ -575,9 +580,7 @@ class TeamClusterer(PlayerClusterer):
             Clustering results with team information
         """
         # Extract embeddings with team context
-        player_embeddings = self.extract_player_embeddings(
-            player_images, team_contexts=team_contexts
-        )
+        player_embeddings = self.extract_player_embeddings(player_images)
         
         # Perform clustering
         results = self.cluster_players(player_embeddings)

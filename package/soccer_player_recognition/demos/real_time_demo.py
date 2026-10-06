@@ -634,6 +634,7 @@ class RealTimeDemo:
         """Run the complete real-time demo."""
         logger.info("🚀 Starting Complete Real-Time Demo")
         logger.info("="*80)
+        self.demo_start_time = time.time()
         
         try:
             # Run all demos
@@ -668,7 +669,7 @@ class RealTimeDemo:
         total_demos = len(self.demo_results)
         
         logger.info(f"✅ Successful demos: {successful_demos}/{total_demos}")
-        logger.info(f"🕒 Total demo time: {time.time():.0f}")
+        logger.info(f"🕒 Total demo time: {time.time() - self.demo_start_time:.1f}s")
         
         logger.info("\n🎯 Demonstrated Capabilities:")
         logger.info("  • Real-time frame processing")
@@ -734,7 +735,7 @@ class RealTimeDemo:
             
             # Save to JSON
             with open(output_dir / 'demo_summary.json', 'w') as f:
-                json.dump(summary, f, indent=2)
+                json.dump(summary, f, indent=2, default=str)
             
             # Save individual demo results
             for demo_name, result in self.demo_results.items():
@@ -763,7 +764,7 @@ def main():
             print("\n🎉 Real-Time Demo completed successfully!")
             print("Check the 'outputs/real_time_demo/' directory for detailed results.")
             print("\nKey Features Demonstrated:")
-            print("  • Real-time frame processing at 30+ FPS")
+            print("  • Real-time frame processing")
             print("  • Multi-threaded processing for performance")
             print("  • Memory optimization and error handling")
             print("  • Performance monitoring and statistics")

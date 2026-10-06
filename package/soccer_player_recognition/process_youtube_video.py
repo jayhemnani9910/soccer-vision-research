@@ -2,8 +2,9 @@
 """
 Process YouTube Video with Soccer Player Recognition System
 
-This script processes the downloaded YouTube video through all AI models
-and generates comprehensive analysis results.
+This script walks a downloaded YouTube video frame by frame and writes an
+analysis report. No AI models run: detections, masks and identities are
+synthetic demo data, so the report shows the output format, not real results.
 """
 
 import sys
@@ -17,20 +18,17 @@ import json
 # Add the parent directory to the Python path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from soccer_player_recognition.core.results import DetectionResult, SegmentationResult, IdentificationResult, ClassificationResult
-from utils.performance_monitor import PerformanceMonitor
-from utils.image_utils import create_synthetic_soccer_field, draw_detections, draw_segmentations
+from soccer_player_recognition.core import get_system_info
+from soccer_player_recognition.core.results import DetectionResult, SegmentationResult, IdentificationResult
 
 class YouTubeVideoProcessor:
     """Process YouTube videos with soccer player recognition."""
     
-    def __init__(self):
-        self.performance_monitor = PerformanceMonitor()
-        
     def process_video(self, video_path: str, output_dir: str = "outputs/youtube_analysis"):
         """Process video through all AI models."""
         
         print(f"🎬 Processing YouTube Video: {video_path}")
+        print("⚠️  DEMO MODE: no AI models run. Detections and identities are synthetic demo data.")
         print("=" * 60)
         
         # Create output directory
@@ -59,8 +57,6 @@ class YouTubeVideoProcessor:
         frame_count = 0
         results = []
         
-        self.performance_monitor.start_monitoring()
-        
         while True:
             ret, frame = cap.read()
             if not ret:
@@ -82,8 +78,6 @@ class YouTubeVideoProcessor:
                 
             frame_count += 1
             
-        self.performance_monitor.stop_monitoring()
-        
         # Generate summary report
         self.generate_summary_report(results, output_dir, video_path)
         
@@ -119,33 +113,33 @@ class YouTubeVideoProcessor:
                     'class_name': 'ball'
                 }
             ],
-            frame_number=frame_num,
-            processing_time=0.05,
+            image_id=frame_num,
+            execution_time=0.05,
             model_name="RF-DETR"
         )
         
         # Segmentation (SAM2)
         segmentation_result = SegmentationResult(
-            masks=[
-                {
+            masks={
+                'object_0': {
                     'mask': np.random.rand(frame.shape[0], frame.shape[1]) > 0.7,
                     'confidence': 0.88,
                     'class_id': 0
                 },
-                {
+                'object_1': {
                     'mask': np.random.rand(frame.shape[0], frame.shape[1]) > 0.8,
                     'confidence': 0.82,
                     'class_id': 0
                 }
-            ],
-            frame_number=frame_num,
-            processing_time=0.08,
+            },
+            frame_id=frame_num,
+            execution_time=0.08,
             model_name="SAM2"
         )
         
         # Identification (SigLIP)
         identification_result = IdentificationResult(
-            identifications=[
+            predictions=[
                 {
                     'player_id': 'Player_23',
                     'confidence': 0.89,
@@ -153,14 +147,14 @@ class YouTubeVideoProcessor:
                     'position': [125, 140]
                 }
             ],
-            frame_number=frame_num,
-            processing_time=0.06,
+            image_index=frame_num,
+            execution_time=0.06,
             model_name="SigLIP"
         )
         
-        # Classification (ResNet)
-        classification_result = ClassificationResult(
-            classifications=[
+        # Classification (ResNet); core/results.py has no ClassificationResult
+        classification_result = {
+            'classifications': [
                 {
                     'player_id': 'Player_23',
                     'class_name': 'Forward',
@@ -168,10 +162,10 @@ class YouTubeVideoProcessor:
                     'team': 'Team_A'
                 }
             ],
-            frame_number=frame_num,
-            processing_time=0.04,
-            model_name="ResNet"
-        )
+            'frame_number': frame_num,
+            'execution_time': 0.04,
+            'model_name': "ResNet"
+        }
         
         return {
             'frame_number': frame_num,
@@ -207,8 +201,8 @@ class YouTubeVideoProcessor:
         
         # Draw identification info
         identification = results['identification']
-        if identification.identifications:
-            for ident in identification.identifications:
+        if identification.predictions:
+            for ident in identification.predictions:
                 player_id = ident['player_id']
                 confidence = ident['confidence']
                 team = ident['team']
@@ -238,10 +232,10 @@ class YouTubeVideoProcessor:
                                for d in r['detection'].detections])
         
         # Processing times
-        avg_detection_time = np.mean([r['detection'].processing_time for r in results])
-        avg_segmentation_time = np.mean([r['segmentation'].processing_time for r in results])
-        avg_identification_time = np.mean([r['identification'].processing_time for r in results])
-        avg_classification_time = np.mean([r['classification'].processing_time for r in results])
+        avg_detection_time = np.mean([r['detection'].execution_time for r in results])
+        avg_segmentation_time = np.mean([r['segmentation'].execution_time for r in results])
+        avg_identification_time = np.mean([r['identification'].execution_time for r in results])
+        avg_classification_time = np.mean([r['classification']['execution_time'] for r in results])
         
         report = {
             'video_file': video_path,
@@ -257,13 +251,14 @@ class YouTubeVideoProcessor:
                     'classification': float(avg_classification_time)
                 }
             },
+            'data_source': 'synthetic demo data (no AI models run)',
             'model_performance': {
-                'rf_detr': {'status': '✅ Active', 'avg_fps': 1.0/avg_detection_time},
-                'sam2': {'status': '✅ Active', 'avg_fps': 1.0/avg_segmentation_time},
-                'siglip': {'status': '✅ Active', 'avg_fps': 1.0/avg_identification_time},
-                'resnet': {'status': '✅ Active', 'avg_fps': 1.0/avg_classification_time}
+                'rf_detr': {'status': 'simulated', 'avg_fps': 1.0/avg_detection_time},
+                'sam2': {'status': 'simulated', 'avg_fps': 1.0/avg_segmentation_time},
+                'siglip': {'status': 'simulated', 'avg_fps': 1.0/avg_identification_time},
+                'resnet': {'status': 'simulated', 'avg_fps': 1.0/avg_classification_time}
             },
-            'system_info': self.performance_monitor.get_system_info()
+            'system_info': get_system_info()
         }
         
         # Save report
@@ -277,7 +272,7 @@ class YouTubeVideoProcessor:
         print(f"   🖼️  Frames Processed: {total_frames}")
         print(f"   👥 Players Detected: {total_players}")
         print(f"   🎯 Avg Confidence: {avg_confidence:.2f}")
-        print(f"   ⚡ Processing Speed: {total_frames/sum([r['detection'].processing_time + r['segmentation'].processing_time + r['identification'].processing_time + r['classification'].processing_time for r in results]):.2f} FPS")
+        print(f"   ⚡ Processing Speed: {total_frames/sum([r['detection'].execution_time + r['segmentation'].execution_time + r['identification'].execution_time + r['classification']['execution_time'] for r in results]):.2f} FPS")
         print(f"   📊 Report Saved: {report_path}")
 
 def main():

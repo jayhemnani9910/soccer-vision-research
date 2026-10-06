@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 from pathlib import Path
+import argparse
 import logging
 
 # Import SAM2 components
@@ -22,6 +23,9 @@ from utils.sam2_utils import (
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Where demo images/videos are written; override with --output-dir
+OUTPUT_DIR = Path(__file__).resolve().parent.parent / 'outputs' / 'segmentation'
 
 
 def create_demo_video_frames(num_frames: int = 10, height: int = 480, width: int = 640) -> np.ndarray:
@@ -119,7 +123,7 @@ def demo_basic_segmentation():
         axes[2].axis('off')
     
     plt.tight_layout()
-    plt.savefig('/workspace/soccer_player_recognition/outputs/segmentation/demo_basic_segmentation.png')
+    plt.savefig(str(OUTPUT_DIR / 'demo_basic_segmentation.png'))
     plt.show()
     
     return sam2_model, masks
@@ -174,7 +178,7 @@ def demo_tracking():
     VideoProcessor.save_masks_to_video(
         frames, 
         {},  # Would need to store masks over time
-        '/workspace/soccer_player_recognition/outputs/segmentation/tracking_demo.mp4'
+        str(OUTPUT_DIR / 'tracking_demo.mp4')
     )
     
     return tracker, tracking_results
@@ -247,7 +251,7 @@ def demo_occlusion_handling():
         axes[2].set_title('Occlusion Handling')
     
     plt.tight_layout()
-    plt.savefig('/workspace/soccer_player_recognition/outputs/segmentation/occlusion_demo.png')
+    plt.savefig(str(OUTPUT_DIR / 'occlusion_demo.png'))
     plt.show()
 
 
@@ -297,7 +301,7 @@ def demo_memory_management():
         plt.text(i, size + 0.1, str(size), ha='center', va='bottom')
     
     plt.tight_layout()
-    plt.savefig('/workspace/soccer_player_recognition/outputs/segmentation/memory_management_demo.png')
+    plt.savefig(str(OUTPUT_DIR / 'memory_management_demo.png'))
     plt.show()
 
 
@@ -321,7 +325,7 @@ def demo_performance_evaluation():
             # Ground truth mask
             gt_mask = torch.zeros(1, height, width)
             center_x = 100 + frame_id * 20  # Moving object
-            center_y = 100 + obj_id == 'player_2' * 50
+            center_y = 100 + (50 if obj_id == 'player_2' else 0)
             y, x = torch.meshgrid(torch.arange(height), torch.arange(width), indexing='ij')
             gt_mask[0] = ((x - center_x)**2 + (y - center_y)**2) < 30**2
             
@@ -382,7 +386,7 @@ def demo_performance_evaluation():
     ax2.legend()
     
     plt.tight_layout()
-    plt.savefig('/workspace/soccer_player_recognition/outputs/segmentation/performance_evaluation_demo.png')
+    plt.savefig(str(OUTPUT_DIR / 'performance_evaluation_demo.png'))
     plt.show()
     
     return frame_metrics
@@ -390,10 +394,16 @@ def demo_performance_evaluation():
 
 def main():
     """Main demo function"""
+    global OUTPUT_DIR
+    parser = argparse.ArgumentParser(description="SAM2 segmentation and tracking demos")
+    parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR,
+                        help="Directory for demo outputs")
+    OUTPUT_DIR = parser.parse_args().output_dir
+    
     logger.info("Starting SAM2 Video Segmentation and Tracking Demos")
     
     # Create output directory
-    output_dir = Path('/workspace/soccer_player_recognition/outputs/segmentation')
+    output_dir = OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
     
     try:

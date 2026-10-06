@@ -5,11 +5,13 @@ This module provides preprocessing and postprocessing utilities for the RF-DETR 
 optimized for soccer player detection tasks.
 """
 
+from __future__ import annotations
+
 import cv2
 import numpy as np
 import torch
 import torchvision.transforms as transforms
-from typing import List, Dict, Tuple, Optional, Union
+from typing import TYPE_CHECKING, List, Dict, Tuple, Optional, Union
 from collections import defaultdict
 
 # Import path fix for relative imports
@@ -17,11 +19,11 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
-try:
+# RFDETRConfig is only used in type hints. Importing it at runtime goes through
+# models/detection/__init__.py, which imports rf_detr_model, which imports this
+# module again (circular import).
+if TYPE_CHECKING:
     from models.detection.rf_detr_config import RFDETRConfig
-except ImportError:
-    # Fallback for when running from different directory
-    from soccer_player_recognition.models.detection.rf_detr_config import RFDETRConfig
 
 
 class RFDETRPreprocessor:
@@ -248,7 +250,7 @@ class RFDETRPostprocessor:
             
             # Apply NMS
             class_keep = self._torch_nms(class_boxes, class_scores)
-            keep_indices.extend(class_mask.nonzero()[class_keep].tolist())
+            keep_indices.extend(class_mask.nonzero(as_tuple=True)[0][class_keep].tolist())
         
         return keep_indices
     

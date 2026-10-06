@@ -20,6 +20,7 @@ Date: 2025-11-04
 import os
 import json
 import logging
+import yaml
 from typing import Any, Dict, List, Optional, Union, Tuple
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -507,6 +508,10 @@ class ModelConfigManager:
         Returns:
             Model configuration object
         """
+        if model_type == ModelType.IDENTIFICATION:
+            # There is no IdentificationConfig class yet
+            raise ValueError("Identification model configuration is not supported yet")
+
         config_file_map = {
             ModelType.DETECTION: "detection_config.yaml",
             ModelType.SEGMENTATION: "segmentation_config.yaml", 
@@ -519,7 +524,7 @@ class ModelConfigManager:
         
         try:
             with open(config_file, 'r') as f:
-                config_data = json.load(f)
+                config_data = yaml.safe_load(f)
             
             if model_type == ModelType.DETECTION:
                 config = DetectionConfig.from_dict(config_data)

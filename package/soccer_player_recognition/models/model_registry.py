@@ -45,7 +45,9 @@ class ModelRegistry:
         self.model_types = set(model_type.value for model_type in ModelType)
         
         # Create models directory if it doesn't exist
-        os.makedirs(os.path.dirname(registry_path), exist_ok=True)
+        registry_dir = os.path.dirname(registry_path)
+        if registry_dir:
+            os.makedirs(registry_dir, exist_ok=True)
         
         # Load existing registry
         self._load_registry()
@@ -90,7 +92,7 @@ class ModelRegistry:
             "model_type": model_type.value,
             "model_path": model_path,
             "config_path": config_path,
-            "metadata": metadata or {},
+            "metadata": dict(metadata or {}),
             "registered_at": self._get_timestamp(),
             "is_active": True
         }
@@ -252,7 +254,7 @@ class ModelRegistry:
         """Save the registry to file."""
         try:
             with open(self.registry_path, 'w') as f:
-                json.dump(self.models, f, indent=2)
+                json.dump(self.models, f, indent=2, default=str)
         except Exception as e:
             logger.error(f"Error saving registry: {e}")
     

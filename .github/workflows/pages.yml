@@ -1,8 +1,7 @@
 name: Deploy to GitHub Pages
 
+# Manual only: the Jekyll workflow (jekyll-gh-pages.yml) is the deploy on push.
 on:
-  push:
-    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -58,55 +57,55 @@ jobs:
             python -m pip install --upgrade pip
             python -m pip install markdown
             python - <<'PY'
-import pathlib
-import markdown
+          import pathlib
+          import markdown
 
-readme_path = pathlib.Path('README.md')
-md = readme_path.read_text(encoding='utf-8')
-body = markdown.markdown(md, extensions=['fenced_code', 'tables', 'toc'])
+          readme_path = pathlib.Path('README.md')
+          md = readme_path.read_text(encoding='utf-8')
+          body = markdown.markdown(md, extensions=['fenced_code', 'tables', 'toc'])
 
-html = f'''<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{readme_path.parent.name}</title>
-  <style>
-    :root {{ color-scheme: light dark; }}
-    body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; }}
-    main {{ max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; line-height: 1.6; }}
-    pre {{ overflow-x: auto; padding: 12px; border-radius: 8px; background: rgba(127,127,127,0.15); }}
-    code {{ padding: 2px 4px; border-radius: 6px; background: rgba(127,127,127,0.15); }}
-    a {{ color: inherit; }}
-    img {{ max-width: 100%; height: auto; }}
-  </style>
-</head>
-<body>
-  <main class="markdown-body">
-    {body}
-  </main>
-</body>
-</html>'''
+          html = f'''<!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>{readme_path.parent.name}</title>
+            <style>
+              :root {{ color-scheme: light dark; }}
+              body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; }}
+              main {{ max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; line-height: 1.6; }}
+              pre {{ overflow-x: auto; padding: 12px; border-radius: 8px; background: rgba(127,127,127,0.15); }}
+              code {{ padding: 2px 4px; border-radius: 6px; background: rgba(127,127,127,0.15); }}
+              a {{ color: inherit; }}
+              img {{ max-width: 100%; height: auto; }}
+            </style>
+          </head>
+          <body>
+            <main class="markdown-body">
+              {body}
+            </main>
+          </body>
+          </html>'''
 
-pathlib.Path('site').mkdir(exist_ok=True)
-pathlib.Path('site/index.html').write_text(html, encoding='utf-8')
-PY
+          pathlib.Path('site').mkdir(exist_ok=True)
+          pathlib.Path('site/index.html').write_text(html, encoding='utf-8')
+          PY
           else
             cat > site/index.html <<'HTML'
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Project</title>
-  <style>body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;max-width:960px;margin:40px auto;padding:0 16px;line-height:1.6}</style>
-</head>
-<body>
-  <h1>Project</h1>
-  <p>No demo content found.</p>
-</body>
-</html>
-HTML
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Project</title>
+            <style>body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;max-width:960px;margin:40px auto;padding:0 16px;line-height:1.6}</style>
+          </head>
+          <body>
+            <h1>Project</h1>
+            <p>No demo content found.</p>
+          </body>
+          </html>
+          HTML
           fi
 
           touch site/.nojekyll

@@ -87,11 +87,11 @@ class RFDETRTransformer(nn.Module):
         self.num_feature_levels = num_feature_levels
         
         # Encoder
-        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
         
         # Decoder
-        decoder_layer = nn.TransformerDecoderLayer(d_model=d_model, nhead=nhead)
+        decoder_layer = nn.TransformerDecoderLayer(d_model=d_model, nhead=nhead, batch_first=True)
         self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=6)
         
         # Learnable object queries
@@ -152,7 +152,10 @@ class RFDETRModel(nn.Module):
         
         self.config = config
         self.num_classes = config.num_classes
-        self.device = torch.device(config.model_device)
+        device = config.model_device
+        if device.startswith("cuda") and not torch.cuda.is_available():
+            device = "cpu"
+        self.device = torch.device(device)
         
         # Build model components
         self.backbone = RFDETRBackbone(
@@ -185,6 +188,8 @@ class RFDETRModel(nn.Module):
         # Logging
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"Initialized RF-DETR model with {self.config.class_names}")
+
+        self.to(self.device)
     
     def _init_model(self):
         """Initialize model weights."""
@@ -294,9 +299,9 @@ class RFDETRModel(nn.Module):
             if len(images.shape) == 3:
                 images = images[np.newaxis, ...]  # Add batch dimension
             
-            batch_tensor = self.preprocessor.preprocess_batch(images.tolist())
+            batch_tensor = self.preprocessor.preprocess_batch(list(images))
             image_info_list = [self.preprocessor.get_image_info(img) for img in images]
-            original_images = images.tolist()
+            original_images = list(images)
         elif isinstance(images, torch.Tensor):
             batch_tensor = images.to(self.device)
             image_info_list = [{} for _ in range(batch_tensor.shape[0])]

@@ -11,7 +11,6 @@ Date: 2025-11-04
 
 import cv2
 import numpy as np
-import pytesseract
 from typing import List, Tuple, Dict, Optional, Any, Union
 import logging
 from pathlib import Path
@@ -21,7 +20,7 @@ import matplotlib.pyplot as plt
 import json
 from collections import Counter
 
-from soccer_player_recognition.utils.logger import get_logger
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -81,7 +80,8 @@ class JerseyNumberExtractor:
     def _configure_tesseract(self):
         """Configure Tesseract OCR parameters."""
         try:
-            # Test Tesseract installation
+            # Test Tesseract installation (pytesseract is optional, imported lazily)
+            import pytesseract
             version = pytesseract.get_tesseract_version()
             logger.info(f"Tesseract version: {version}")
         except Exception as e:
@@ -287,6 +287,7 @@ class JerseyNumberExtractor:
             processed_region = self._preprocess_for_ocr(region)
             
             # Apply OCR
+            import pytesseract
             results = pytesseract.image_to_string(
                 processed_region, 
                 config=self.config['tesseract_config']

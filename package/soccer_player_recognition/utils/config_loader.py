@@ -34,7 +34,7 @@ class ConfigLoader:
             config_dir: Path to the configuration directory. If None, uses default.
         """
         if config_dir is None:
-            self.config_dir = Path(__file__).parent
+            self.config_dir = Path(__file__).parent.parent / "config"
         else:
             self.config_dir = Path(config_dir)
         
@@ -173,7 +173,7 @@ class ConfigLoader:
         if '.' in key:
             # Handle nested keys
             keys = key.split('.')
-            config_dict = self.model_configs if self._is_yaml_key(key) else self.settings
+            config_dict = self.settings if keys[0] in self.settings else self.model_configs
             
             # Navigate to the parent dictionary
             for k in keys[:-1]:

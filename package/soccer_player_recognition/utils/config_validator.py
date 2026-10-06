@@ -23,6 +23,7 @@ import json
 import yaml
 import logging
 import re
+import time
 from typing import Any, Dict, List, Optional, Union, Tuple, Set
 from dataclasses import dataclass
 from pathlib import Path
@@ -844,7 +845,9 @@ class ConfigValidator:
         devices = {}
         
         for config_name, config in configs.items():
-            device = config.get("device", {}).get("device", "unknown")
+            device = config.get("device", "unknown")
+            if isinstance(device, dict):
+                device = device.get("device", "unknown")
             devices[config_name] = device
         
         # Check for mixed CPU/GPU usage
@@ -951,7 +954,7 @@ class ConfigValidator:
         
         total_errors = sum(r.errors for r in reports)
         total_warnings = sum(r.warnings for r in reports)
-        total_score = sum(r.score * r.total_issues for r in reports) / max(sum(r.total_issues for r in reports), 1)
+        total_score = sum(r.score for r in reports) / max(len(reports), 1)
         
         report_lines.append("## Summary")
         report_lines.append(f"- Total Files: {len(reports)}")

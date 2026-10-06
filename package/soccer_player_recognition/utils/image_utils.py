@@ -98,7 +98,7 @@ class ImageProcessor:
         image_normalized = image_rgb.astype(np.float32) / 255.0
         
         # Apply ImageNet normalization
-        image_normalized = (image_normalized - self.mean) / self.std
+        image_normalized = (image_normalized - np.array(self.mean, dtype=np.float32)) / np.array(self.std, dtype=np.float32)
         
         return image_normalized
     
@@ -328,7 +328,7 @@ def create_torch_tensor(image: np.ndarray,
     Returns:
         PyTorch tensor
     """
-    processor = ImageProcessor(target_size)
+    processor = ImageProcessor(target_size) if target_size is not None else ImageProcessor()
     
     # Resize image
     image = processor.resize_image(image)
@@ -372,6 +372,9 @@ def load_and_process_image(image_path: Union[str, Path],
     
     if denoise:
         image = processor.apply_noise_reduction(image)
+    
+    if target_size is not None:
+        image = processor.resize_image(image)
     
     return image
 

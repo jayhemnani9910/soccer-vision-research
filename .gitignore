@@ -84,3 +84,7 @@ Thumbs.db
 
 # Jupyter
 .ipynb_checkpoints/
+
+# /audit outputs
+graphify-out/
+.audit/

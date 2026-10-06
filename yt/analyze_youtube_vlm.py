@@ -65,7 +65,6 @@ def ensure_video_downloaded(url: str, out_dir: Path) -> Path:
         "format": "best[ext=mp4]/best",
         "noplaylist": True,
         "quiet": False,
-        "nocheckcertificate": True,
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -146,7 +145,9 @@ def extract_frames(
 
         elif scene_change_method == "content-diff":
             if last_frame is not None:
-                diff = cv2.absdiff(last_frame, frame)
+                diff = cv2.cvtColor(cv2.absdiff(last_frame, frame), cv2.COLOR_BGR2GRAY)
+                # ignore small per-pixel noise before counting changed pixels
+                _, diff = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
                 non_zero = cv2.countNonZero(diff)
                 total_pixels = diff.shape[0] * diff.shape[1]
                 ratio = (non_zero / float(total_pixels)) if total_pixels > 0 else 0.0
@@ -167,7 +168,7 @@ def extract_frames(
 
     cap.release()
     # Ensure we always include the first frame
-    if frames and frames[0]["frame_idx"] != 0:
+    if not frames or frames[0]["frame_idx"] != 0:
         cap2 = cv2.VideoCapture(str(video_path))
         ret, first = cap2.read()
         if ret:
@@ -249,6 +250,8 @@ class Qwen2VLBackend:
 
         inputs = self.processor(text=[text_prompt], images=[image_path], return_tensors="pt").to(self.model.device)
         generated_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+        # generate() returns prompt + answer; decode only the answer
+        generated_ids = generated_ids[:, inputs["input_ids"].shape[1]:]
         out = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
         return out
 
@@ -261,7 +264,13 @@ class OpenAIBackend:
         self.model = model
 
     def chat(self, messages: List[Dict[str, Any]], max_new_tokens: int = 1024) -> str:
-        # OpenAI expects content with text and image_url
+        # OpenAI expects content with text and image_url; it cannot fetch file:// URLs
+        for m in messages:
+            if isinstance(m.get("content"), list):
+                for c in m["content"]:
+                    url = c.get("image_url", {}).get("url", "") if isinstance(c, dict) else ""
+                    if url.startswith("file://"):
+                        c["image_url"]["url"] = image_to_data_url(Path(url[len("file://"):]))
         resp = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
@@ -507,25 +516,29 @@ def analyze_youtube(url: str):
             ts = f["timestamp_s"]
             img_path = Path(f["image_path"])
 
-            # 1) Scanner
-            scanner = run_agent(vlm, img_path, SYSTEM_COMMON, SCANNER_PROMPT)
+            try:
+                # 1) Scanner
+                scanner = run_agent(vlm, img_path, SYSTEM_COMMON, SCANNER_PROMPT)
 
-            # 2) Tracker
-            if prev_state.prev_scanner is not None:
-                tracker = run_agent(vlm, img_path, SYSTEM_COMMON, TRACKER_PROMPT)
-            else:
-                tracker = {
-                    "intro_objects": scanner.get("objects", []),
-                    "removed_objects": [],
-                    "moved_objects": [],
-                    "changed_attributes": [],
-                    "text_changes": [],
-                    "global_events": [],
-                    "notes": "First frame in video."
-                }
+                # 2) Tracker
+                if prev_state.prev_scanner is not None:
+                    tracker = run_agent(vlm, img_path, SYSTEM_COMMON, TRACKER_PROMPT)
+                else:
+                    tracker = {
+                        "intro_objects": scanner.get("objects", []),
+                        "removed_objects": [],
+                        "moved_objects": [],
+                        "changed_attributes": [],
+                        "text_changes": [],
+                        "global_events": [],
+                        "notes": "First frame in video."
+                    }
 
-            # 3) Q&A
-            qa = run_agent(vlm, img_path, SYSTEM_COMMON, QA_PROMPT)
+                # 3) Q&A
+                qa = run_agent(vlm, img_path, SYSTEM_COMMON, QA_PROMPT)
+            except ValueError as e:
+                print(f"Skipping frame {frame_idx} (t={ts:.2f}s): agent returned bad JSON: {e}")
+                continue
 
             # Persist to DB
             frame_id = db_insert_frame(conn, scene_id, frame_idx, ts, str(img_path), scanner, tracker, qa)

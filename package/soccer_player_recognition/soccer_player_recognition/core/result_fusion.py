@@ -236,7 +236,7 @@ class ResultFuser:
             # Single result
             if hasattr(detection_results, 'detections'):
                 all_detections = detection_results.detections
-            elif isinstance(detection_results, dict) and 'detections' in result:
+            elif isinstance(detection_results, dict) and 'detections' in detection_results:
                 all_detections = detection_results['detections']
             else:
                 all_detections = []
@@ -308,7 +308,7 @@ class ResultFuser:
             # Single result
             if hasattr(segmentation_results, 'masks'):
                 all_segmentations = [segmentation_results]
-            elif isinstance(segmentation_results, dict) and 'masks' in result:
+            elif isinstance(segmentation_results, dict) and 'masks' in segmentation_results:
                 all_segmentations = [segmentation_results]
             else:
                 all_segmentations = []

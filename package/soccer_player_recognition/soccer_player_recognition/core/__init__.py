@@ -248,6 +248,7 @@ def demo_integration_framework():
         print(f"  {component}: {status}")
     
     # Create minimal recognizer for demo if available
+    recognizer = None
     if _player_recognizer_available:
         print(f"\n1. Creating minimal PlayerRecognizer...")
         try:
@@ -300,10 +301,7 @@ def demo_integration_framework():
     
     print(f"\nDemo completed successfully!")
     
-    if _player_recognizer_available:
-        return create_minimal_recognizer()
-    else:
-        return None
+    return recognizer
 
 
 if __name__ == "__main__":

@@ -150,7 +150,7 @@ def test_framework_architecture():
     print("\n1. Testing Design Patterns...")
     
     try:
-        from soccer_player_recognition.core.config import SystemConfig
+        from soccer_player_recognition.core.config import SystemConfig, load_config
         
         # Test factory pattern
         presets = ["balanced", "real_time", "high_accuracy", "development"]

@@ -19,6 +19,8 @@ import yaml
 import os
 import time
 import logging
+import gc
+import torch
 import numpy as np
 import cv2
 from pathlib import Path

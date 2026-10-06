@@ -56,7 +56,7 @@ class Visualizer:
         Returns:
             Image with bounding box
         """
-        x, y, w, h = bbox
+        x, y, w, h = map(int, bbox)
         
         # Draw bounding box
         cv2.rectangle(image, (x, y), (x + w, y + h), color, thickness)
@@ -143,8 +143,8 @@ class Visualizer:
                 if (start_idx < len(keypoints) and end_idx < len(keypoints) and
                     all(0 <= x < image.shape[1] and 0 <= y < image.shape[0] 
                         for x, y in [keypoints[start_idx], keypoints[end_idx]])):
-                    cv2.line(result_image, keypoints[start_idx], keypoints[end_idx],
-                           line_color, thickness)
+                    cv2.line(result_image, tuple(map(int, keypoints[start_idx])),
+                           tuple(map(int, keypoints[end_idx])), line_color, thickness)
         
         # Draw keypoints
         for x, y in keypoints:
@@ -201,6 +201,8 @@ class Visualizer:
         
         if len(track_history) < 2:
             return result_image
+        
+        track_history = [tuple(map(int, p)) for p in track_history]
         
         # Draw connecting lines
         for i in range(1, len(track_history)):
@@ -323,8 +325,7 @@ class Visualizer:
         
         # Convert to numpy array
         fig.canvas.draw()
-        grid_image = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-        grid_image = grid_image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        grid_image = np.asarray(fig.canvas.buffer_rgba())[..., :3].copy()
         
         plt.close(fig)
         return grid_image
@@ -465,8 +466,7 @@ def create_confusion_matrix_visualization(confusion_matrix: np.ndarray,
     # Convert to numpy array
     fig = plt.gcf()
     fig.canvas.draw()
-    confusion_matrix_img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    confusion_matrix_img = confusion_matrix_img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    confusion_matrix_img = np.asarray(fig.canvas.buffer_rgba())[..., :3].copy()
     
     plt.close(fig)
     return confusion_matrix_img
@@ -508,8 +508,7 @@ def plot_training_metrics(metrics_history: Dict[str, List[float]],
     # Convert to numpy array
     fig = plt.gcf()
     fig.canvas.draw()
-    metrics_img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    metrics_img = metrics_img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    metrics_img = np.asarray(fig.canvas.buffer_rgba())[..., :3].copy()
     
     plt.close(fig)
     return metrics_img
@@ -555,8 +554,7 @@ def create_comparison_visualization(original: np.ndarray,
     
     # Convert to numpy array
     fig.canvas.draw()
-    comparison_img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    comparison_img = comparison_img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    comparison_img = np.asarray(fig.canvas.buffer_rgba())[..., :3].copy()
     
     plt.close(fig)
     return comparison_img

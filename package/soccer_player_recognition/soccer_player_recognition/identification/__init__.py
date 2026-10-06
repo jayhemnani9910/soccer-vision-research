@@ -2,16 +2,9 @@
 
 This module handles player identification using:
 - SigLIP zero-shot identification
-- Traditional facial features and jersey analysis
 - Multimodal text-image matching
 - Player clustering algorithms
 """
-
-# Traditional identification methods
-from .face_identifier import FaceIdentifier
-from .jersey_analyzer import JerseyAnalyzer
-from .identification_engine import IdentificationEngine
-from .embedding_extractor import EmbeddingExtractor
 
 # SigLIP zero-shot identification
 from ..models.identification.siglip_model import (
@@ -42,12 +35,6 @@ from ..utils.siglip_utils import (
 )
 
 __all__ = [
-    # Traditional identification
-    "FaceIdentifier",
-    "JerseyAnalyzer",
-    "IdentificationEngine", 
-    "EmbeddingExtractor",
-    
     # SigLIP identification
     "SigLIPPlayerIdentification",
     "SigLIPConfig",

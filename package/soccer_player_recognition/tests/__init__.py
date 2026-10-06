@@ -231,6 +231,7 @@ def check_test_dependencies():
 
 if __name__ == '__main__':
     import argparse
+    import sys
     
     parser = argparse.ArgumentParser(description='Soccer Player Recognition Test Runner')
     parser.add_argument('--category', choices=['models', 'performance', 'integration', 'utilities'],

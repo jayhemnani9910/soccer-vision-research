@@ -726,7 +726,7 @@ class SingleModelDemo:
             
             # Save summary
             with open(output_dir / 'demo_summary.json', 'w') as f:
-                json.dump(summary, f, indent=2)
+                json.dump(summary, f, indent=2, default=str)
             
             # Save individual model results
             for model_name, result in self.demo_results.items():

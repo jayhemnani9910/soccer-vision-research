@@ -78,9 +78,13 @@ def run_tests_with_pytest(test_type=None, test_names=None, **kwargs):
     cmd_parts = ["python", "-m", "pytest"]
     
     # Add test path
-    test_path = "tests"
-    if test_type:
-        test_path = f"tests/{test_type}*.py"
+    category_files = {
+        'models': 'tests/test_all_models.py',
+        'performance': 'tests/performance_tests.py',
+        'integration': 'tests/integration_tests.py',
+        'utils': 'tests/utils_tests.py',
+    }
+    test_path = category_files[test_type] if test_type else "tests"
     
     cmd_parts.append(test_path)
     
@@ -141,10 +145,10 @@ def run_benchmark_comparison():
     
     if baseline_file.exists():
         print("📊 Comparing against existing baseline...")
-        success = run_command("python -m pytest tests/performance_tests.py::TestPerformanceRegression -v", cwd=current_dir)
+        success, _, _ = run_command("python -m pytest tests/performance_tests.py::TestPerformanceRegression -v", cwd=current_dir)
     else:
         print("📊 No baseline found. Creating new baseline...")
-        success = run_command("python -m pytest tests/performance_tests.py::TestPerformanceRegression::test_baseline_performance -v", cwd=current_dir)
+        success, _, _ = run_command("python -m pytest tests/performance_tests.py::TestPerformanceRegression::test_baseline_performance -v", cwd=current_dir)
     
     return success
 

@@ -748,20 +748,7 @@ class BenchmarkDemo:
                     for result in self.demo_results.values()
                 ) else 'PARTIAL'
             },
-            'detailed_results': self.demo_results,
-            'recommendations': [
-                'RF-DETR shows excellent real-time performance for object detection',
-                'ResNet provides consistent throughput for player classification',
-                'Load testing reveals good scalability up to 20 concurrent users',
-                'Memory usage remains stable under sustained load',
-                'Consider GPU acceleration for SAM2 segmentation workloads'
-            ],
-            'performance_highlights': {
-                'best_throughput': 'RF-DETR (85.3 samples/sec)',
-                'lowest_latency': 'ResNet (12.5ms avg)',
-                'most_stable': 'SigLIP (99.2% success rate)',
-                'highest_efficiency': 'ResNet (1.2ms/MB processed)'
-            }
+            'detailed_results': dict(self.demo_results)
         }
         
         self.demo_results['performance_report'] = report
@@ -829,12 +816,6 @@ class BenchmarkDemo:
             logger.info(f"  • Duration: {stress['duration_minutes']:.1f} minutes")
             logger.info(f"  • Total requests: {stress['total_requests']:,}")
             logger.info(f"  • Error rate: {stress['error_rate']:.2%}")
-        
-        logger.info("\n🎯 Key Findings:")
-        logger.info("  • All models meet real-time performance requirements")
-        logger.info("  • System scales well under increased load")
-        logger.info("  • Resource usage remains within acceptable limits")
-        logger.info("  • Error handling performs reliably under stress")
     
     def save_results(self):
         """Save benchmark results to files."""

@@ -22,9 +22,7 @@ from scipy.stats import cosine
 from sklearn.metrics.pairwise import cosine_similarity
 import logging
 
-from .logger import get_logger
-
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @dataclass

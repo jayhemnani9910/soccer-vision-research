@@ -22,7 +22,7 @@ import json
 from PIL import Image
 import cv2
 
-from soccer_player_recognition.utils.logger import get_logger
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -345,7 +345,8 @@ class PlayerRecognitionModel:
         
         logger.info(f"Initialized PlayerRecognitionModel with {num_players} players on {self.device}")
     
-    def _get_device(self, device: str) -> torch.device:
+    @staticmethod
+    def _get_device(device: str) -> torch.device:
         """Get computation device."""
         if device == "auto":
             return torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -396,6 +397,11 @@ class PlayerRecognitionModel:
         Returns:
             Dictionary containing training metrics
         """
+        if self.optimizer is None:
+            raise RuntimeError("Call setup_training() before train_epoch()")
+        if len(train_loader) == 0:
+            raise ValueError("train_loader is empty")
+        
         self.model.train()
         
         total_loss = 0.0
@@ -443,6 +449,9 @@ class PlayerRecognitionModel:
         Returns:
             Dictionary containing validation metrics
         """
+        if len(val_loader) == 0:
+            raise ValueError("val_loader is empty")
+        
         self.model.eval()
         
         total_loss = 0.0
@@ -567,7 +576,7 @@ class PlayerRecognitionModel:
         Returns:
             Loaded PlayerRecognitionModel instance
         """
-        checkpoint = torch.load(path, map_location=device)
+        checkpoint = torch.load(path, map_location=cls._get_device(device))
         config = checkpoint['model_config']
         
         model = cls(

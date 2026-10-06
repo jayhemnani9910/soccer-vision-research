@@ -125,7 +125,7 @@ class ModelInstance:
     def _load_classification_model(self) -> Any:
         """Load classification model (e.g., ResNet, EfficientNet)."""
         try:
-            model = torch.load(self.model_path, map_location=self.device)
+            model = torch.load(self.model_path, map_location=self.device, weights_only=False)
             model.to(self.device)
             model.eval()
             return model
@@ -136,7 +136,7 @@ class ModelInstance:
     def _load_identification_model(self) -> Any:
         """Load identification model (e.g., face recognition, person re-identification)."""
         try:
-            model = torch.load(self.model_path, map_location=self.device)
+            model = torch.load(self.model_path, map_location=self.device, weights_only=False)
             model.to(self.device)
             model.eval()
             return model
@@ -147,7 +147,7 @@ class ModelInstance:
     def _load_segmentation_model(self) -> Any:
         """Load segmentation model (e.g., U-Net, Mask R-CNN)."""
         try:
-            model = torch.load(self.model_path, map_location=self.device)
+            model = torch.load(self.model_path, map_location=self.device, weights_only=False)
             model.to(self.device)
             model.eval()
             return model
@@ -168,7 +168,7 @@ class ModelInstance:
     def _load_generic_model(self) -> Any:
         """Generic model loader as fallback."""
         try:
-            model = torch.load(self.model_path, map_location=self.device)
+            model = torch.load(self.model_path, map_location=self.device, weights_only=False)
             model.to(self.device)
             model.eval()
             return model
@@ -226,6 +226,9 @@ class ModelInstance:
         """Perform detection inference."""
         if hasattr(self.model, 'predict'):
             results = self.model.predict(input_data, **kwargs)
+            # ultralytics returns a list of Results, one per image
+            if isinstance(results, list) and results:
+                results = results[0]
             return {
                 'boxes': results.boxes.xyxy if hasattr(results, 'boxes') else [],
                 'scores': results.boxes.conf if hasattr(results, 'boxes') else [],
@@ -235,6 +238,9 @@ class ModelInstance:
         else:
             # Generic inference
             with torch.no_grad():
+                if isinstance(input_data, np.ndarray):
+                    input_data = torch.from_numpy(input_data).float()
+                input_data = input_data.to(self.device)
                 outputs = self.model(input_data)
                 return {'output': outputs}
     
@@ -309,6 +315,9 @@ class ModelInstance:
         else:
             # Generic pose model
             with torch.no_grad():
+                if isinstance(input_data, np.ndarray):
+                    input_data = torch.from_numpy(input_data).float()
+                input_data = input_data.to(self.device)
                 output = self.model(input_data)
                 return {'pose_output': output.cpu().numpy()}
     
@@ -527,6 +536,7 @@ class ModelManager:
         model_id: str, 
         input_data_batch: List[Any],
         max_workers: int = 4,
+        auto_load: bool = True,
         **kwargs
     ) -> List[Dict[str, Any]]:
         """
@@ -536,6 +546,7 @@ class ModelManager:
             model_id: Unique identifier for the model
             input_data_batch: List of input data for inference
             max_workers: Maximum number of worker threads
+            auto_load: Auto-load model if not loaded
             **kwargs: Additional parameters for inference
             
         Returns:

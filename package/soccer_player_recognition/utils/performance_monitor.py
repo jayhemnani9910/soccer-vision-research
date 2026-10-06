@@ -77,7 +77,7 @@ class PerformanceMonitor:
         self.max_history = max_history
         
         # Thread safety
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         
         # Metrics storage
         self.metrics_history: Dict[str, deque] = defaultdict(lambda: deque(maxlen=max_history))
@@ -178,7 +178,13 @@ class PerformanceMonitor:
                 if snapshot.timestamp >= window_start
             ]
             
-            fps = len(recent_inferences) / time_window
+            # Divide by the time actually covered by these inferences, not the whole window
+            if recent_inferences:
+                first = recent_inferences[0]
+                span = recent_inferences[-1].timestamp - (first.timestamp - first.metric_value)
+                fps = len(recent_inferences) / span if span > 0 else 0.0
+            else:
+                fps = 0.0
             
             # Update model stats
             if model_id not in self.model_stats:
@@ -503,7 +509,10 @@ class PerformanceMonitor:
                     
                     f.write("Resource Usage:\n")
                     f.write(f"  Memory Usage: {report.memory_usage_mb:.2f} MB\n")
-                    f.write(f"  GPU Utilization: {report.gpu_utilization:.2f}% (if available)\n")
+                    if report.gpu_utilization is not None:
+                        f.write(f"  GPU Utilization: {report.gpu_utilization:.2f}%\n")
+                    else:
+                        f.write("  GPU Utilization: N/A\n")
                     f.write(f"  CPU Utilization: {report.cpu_utilization:.2f}%\n\n")
                     
                     f.write("Accuracy Metrics:\n")

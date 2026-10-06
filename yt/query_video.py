@@ -24,12 +24,14 @@ def query_objects_by_name(name: str, limit: int = 10) -> List[Dict]:
     WHERE f.scanner_json LIKE ?
     ORDER BY f.timestamp_s
     LIMIT ?
-    """, (f'%"{name}"%', limit))
+    """, (f'%{name}%', limit))
     
     results = []
     for row in cur.fetchall():
         scanner = json.loads(row['scanner_json'])
         objects = [obj for obj in scanner.get('objects', []) if name.lower() in obj.get('name', '').lower()]
+        if not objects:
+            continue
         results.append({
             'frame_id': row['frame_id'],
             'scene_id': row['scene_id'],
@@ -174,16 +176,16 @@ def list_all_scenes() -> List[Dict]:
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     
+    # The analyzer never fills the scenes table, so group frames by scene_id
     cur.execute("""
     SELECT 
-        s.scene_id,
+        f.scene_id,
         MIN(f.timestamp_s) as start_time,
         MAX(f.timestamp_s) as end_time,
         COUNT(f.frame_id) as frame_count
-    FROM scenes s
-    LEFT JOIN frames f ON s.scene_id = f.scene_id
-    GROUP BY s.scene_id
-    ORDER BY s.scene_id
+    FROM frames f
+    GROUP BY f.scene_id
+    ORDER BY f.scene_id
     """)
     
     scenes = []
@@ -192,7 +194,7 @@ def list_all_scenes() -> List[Dict]:
             'scene_id': row['scene_id'],
             'start_time_s': row['start_time'],
             'end_time_s': row['end_time'],
-            'duration_s': row['end_time'] - row['start_time'] if row['start_time'] and row['end_time'] else 0,
+            'duration_s': row['end_time'] - row['start_time'] if row['start_time'] is not None and row['end_time'] is not None else 0,
             'frame_count': row['frame_count']
         })
     
@@ -256,7 +258,8 @@ def main():
         results = query_events_by_type(args.type, args.limit)
         print(f"\nFound {len(results)} events of type '{args.type}':")
         for r in results:
-            print(f"  Scene {r['scene_id']}, Frame {r['frame_id']}, t={r['timestamp_s']:.2f}s")
+            ts = f"{r['timestamp_s']:.2f}s" if r['timestamp_s'] is not None else "n/a"
+            print(f"  Scene {r['scene_id']}, Frame {r['frame_id']}, t={ts}")
             print(f"    - {r['description']}")
     
     elif args.command == 'scene':

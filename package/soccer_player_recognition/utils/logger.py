@@ -102,7 +102,7 @@ class SoccerPlayerRecognitionLogger:
             Logger instance
         """
         if self.logger is None:
-            self.setup_logger(name)
+            self.setup_logger()
         
         if name:
             return logging.getLogger(f"soccer_player_recognition.{name}")

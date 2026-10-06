@@ -418,7 +418,7 @@ class VideoProcessor:
             colors: Color mapping for each track
         """
         if colors is None:
-            colors = {f'track_{i}': tuple(np.random.randint(0, 256, 3)) for i in range(len(masks_dict))}
+            colors = {track_id: tuple(int(v) for v in np.random.randint(0, 256, 3)) for track_id in masks_dict}
         
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         H, W = frames.shape[1:3]
@@ -434,9 +434,9 @@ class VideoProcessor:
                     mask_np = (mask[i].cpu().numpy() > 0.5).astype(np.uint8)
                     color = colors.get(track_id, (255, 255, 255))
                     
-                    # Apply colored mask
-                    colored_mask = np.zeros_like(frame_bgr)
-                    colored_mask[:, :] = color
+                    # Apply colored mask (only inside the mask; other pixels blend with themselves)
+                    colored_mask = frame_bgr.copy()
+                    colored_mask[mask_np.astype(bool)] = color
                     
                     # Blend mask with frame
                     alpha = 0.3
@@ -576,11 +576,11 @@ class VisualizationUtils:
         
         for i, (mask_id, mask) in enumerate(masks.items()):
             mask_np = (mask.squeeze(0).cpu().numpy() > 0.5).astype(np.uint8)
-            color = (colors[i][:3] * 255).astype(np.uint8)
+            color = tuple(int(v) for v in (colors[i][:3] * 255).astype(np.uint8))
             
             # Apply color to mask regions
             colored_mask = np.zeros_like(overlay)
-            colored_mask[mask_np] = color
+            colored_mask[mask_np.astype(bool)] = color
             
             # Blend with original
             overlay = cv2.addWeighted(overlay, 1-alpha, colored_mask, alpha, 0)

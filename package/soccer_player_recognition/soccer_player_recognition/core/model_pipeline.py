@@ -139,9 +139,13 @@ class ModelPipeline:
             
             # Execute detection
             if hasattr(detection_model, 'predict'):
-                # RF-DETR style interface
+                # RF-DETR style interface: predict takes one ndarray (HWC or NHWC)
+                if len(processed_images) == 1:
+                    batch = processed_images[0]
+                else:
+                    batch = np.stack(processed_images)
                 results = detection_model.predict(
-                    processed_images,
+                    batch,
                     confidence_threshold=confidence_threshold,
                     nms_threshold=nms_threshold,
                     max_detections=max_detections,
@@ -486,6 +490,9 @@ class ModelPipeline:
     
     def _preprocess_images_for_siglip(self, images: Union[str, np.ndarray, List[str], List[np.ndarray]]) -> List:
         """Preprocess images specifically for SigLIP model."""
+        if isinstance(images, (str, np.ndarray)):
+            images = [images]
+        
         processed = []
         
         for img in images:
@@ -512,12 +519,16 @@ class ModelPipeline:
         if isinstance(images, list):
             images = np.stack(images)
         
+        # Add batch dimension for a single frame
+        if images.ndim == 3:
+            images = images[np.newaxis, ...]
+        
         # Convert BGR to RGB
-        if len(images.shape) == 4 and images.shape[3] == 3:
-            images = cv2.cvtColor(images, cv2.COLOR_BGR2RGB)
+        if images.shape[3] == 3:
+            images = images[..., ::-1]
         
         # Convert to tensor and normalize
-        images = images.astype(np.float32) / 255.0
+        images = np.ascontiguousarray(images, dtype=np.float32) / 255.0
         tensor_images = torch.from_numpy(images).permute(0, 3, 1, 2)
         
         return tensor_images.to(self.device)

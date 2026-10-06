@@ -170,7 +170,7 @@ class ConfigManager:
         """Check for changes in configuration files."""
         changed_files = []
         
-        for config_file in self.config_dir.rglob("*.{yaml,yml,json}"):
+        for config_file in (p for p in self.config_dir.rglob("*") if p.suffix in (".yaml", ".yml", ".json")):
             try:
                 mtime = config_file.stat().st_mtime
                 file_key = str(config_file)
@@ -424,7 +424,8 @@ class ConfigManager:
             
             # Save if requested
             if save and file_path:
-                self.save_config(config, file_path)
+                fmt = ConfigFormat.JSON if Path(file_path).suffix == ".json" else ConfigFormat.YAML
+                self.save_config(config, file_path, fmt)
     
     def get_all_configs(self) -> Dict[str, Any]:
         """Get all loaded configurations merged together."""
@@ -432,7 +433,7 @@ class ConfigManager:
             all_configs = {}
             
             # Load all configuration files
-            for config_file in self.config_dir.rglob("*.{yaml,yml,json}"):
+            for config_file in (p for p in self.config_dir.rglob("*") if p.suffix in (".yaml", ".yml", ".json")):
                 try:
                     config = self.load_config(config_file)
                     # Merge configurations (later files override earlier ones)

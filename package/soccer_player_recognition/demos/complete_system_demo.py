@@ -84,7 +84,7 @@ class CompleteSystemDemo:
         self.registry = ModelRegistry()
         self.model_manager = ModelManager(self.registry)
         self.performance_monitor = PerformanceMonitor("outputs/performance")
-        self.demo_results = {}
+        self.demo_results = []
         
         # Initialize model paths and configurations
         self.model_configs = {
@@ -549,7 +549,7 @@ class CompleteSystemDemo:
             
             # Save to JSON
             with open(output_dir / 'demo_summary.json', 'w') as f:
-                json.dump(summary, f, indent=2)
+                json.dump(summary, f, indent=2, default=str)
             
             # Save individual results
             for i, result in enumerate(self.demo_results):

@@ -33,7 +33,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 # Add the project root to Python path
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Try importing demo modules
@@ -42,7 +42,7 @@ try:
     from demos.real_time_demo import RealTimeDemo, RealTimeProcessor
     from demos.benchmark_demo import BenchmarkDemo
     from demos.complete_system_demo import CompleteSystemDemo
-except ImportError as e:
+except Exception as e:
     print(f"Warning: Could not import demo modules: {e}")
     # Create mock classes for demonstration
     class MockDemo:
@@ -260,7 +260,7 @@ class ModelControlPanel:
                 self.parent.after(0, lambda: self.show_results(results))
                 
             except Exception as e:
-                self.parent.after(0, lambda: messagebox.showerror("Error", f"Test failed: {e}"))
+                self.parent.after(0, lambda err=e: messagebox.showerror("Error", f"Test failed: {err}"))
         
         thread = threading.Thread(target=test_thread)
         thread.daemon = True
@@ -506,7 +506,7 @@ class DemoControlPanel:
                 self.parent.after(0, lambda: self.log_message("Demo completed successfully!"))
                 
             except Exception as e:
-                self.parent.after(0, lambda: self.log_message(f"Demo failed: {e}"))
+                self.parent.after(0, lambda err=e: self.log_message(f"Demo failed: {err}"))
             finally:
                 self.demo_running = False
                 self.parent.after(0, lambda: self.progress.configure(value=0))

@@ -32,7 +32,7 @@ I have not run the full pipeline end to end. The demo above is the keyframe step
 
 1. Downloads the video with yt-dlp.
 2. Picks keyframes with OpenCV. The default `content-diff` method saves a frame when at least 5% of pixels change by more than 25 grey levels. `hist-threshold` compares HSV histograms instead. Either way it forces a frame if nothing was picked for 15 s.
-3. Sends each keyframe to a vision-language model (Qwen2-VL-2B locally, or an OpenAI model) three times: a scanner prompt, a tracker prompt and a Q&A prompt, each asked to return JSON.
+3. Sends each keyframe to a vision-language model (Qwen2-VL-2B locally, or an OpenAI model) with a scanner prompt, a tracker prompt (skipped on the first frame) and a Q&A prompt, each asked to return JSON.
 4. Writes frames, objects, events and Q&A to SQLite at `vlm_outputs/video_analytics.db`, and scene summaries to `vlm_outputs/scene_narratives.jsonl`.
 
 `yt/query_video.py` searches that database by object, text, event type or scene.

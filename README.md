@@ -47,7 +47,7 @@ What runs, checked with Python 3.11 and PyTorch 2.15 on a laptop with an 8 GB GP
 
 - The package imports, and `PlayerRecognizer(enable_all_models=False)` constructs.
 - `complete_system_demo`, `model_management_demo`, `real_time_demo` and `resnet_demo` run headless to the end. `benchmark_demo` and `single_model_demo` were still running after 3 minutes, so I stopped them. `rf_detr_demo` needs `--input <image>`. `sam2_demo` crashes in `models/segmentation/sam2_model.py`: the input frame stays on the CPU while the model is on the GPU.
-- The test suite collects 97 tests: 35 pass, 62 fail. Most failures are tests written against APIs the code does not have (`ImageUtils`, `DrawUtils`, `register_model(config=...)`).
+- The test suite collects 97 tests: 35 pass, 62 fail. On CPU-only CI (`pip install -e`, which also pulls ultralytics) it is 23 pass, 73 fail, 1 skipped. Most failures are tests written against APIs the code does not have (`ImageUtils`, `DrawUtils`, `register_model(config=...)`).
 
 Toy or simulated parts:
 

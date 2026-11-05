@@ -21,7 +21,7 @@ ruff check --select E9,F63,F7,F82 .
 cd package/soccer_player_recognition && python -m pytest tests -q -p no:cacheprovider
 ```
 
-The suite has 62 known failures, mostly tests for APIs that were never written. A PR should not add new failures. Fixing one of the old ones, either the code or a test that tests nothing real, is welcome.
+The suite has known failures (62 on my GPU laptop, 73 on CPU-only CI), mostly tests for APIs that were never written. A PR should not add new failures. Fixing one of the old ones, either the code or a test that tests nothing real, is welcome.
 
 ## Style
 

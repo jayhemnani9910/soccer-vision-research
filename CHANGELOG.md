@@ -19,6 +19,7 @@ All notable changes to this project are documented here. The format is based on 
 - `yt/`: requirements parse with pip, frame-diff and scene grouping fixed, first frame kept, Qwen output decoding and OpenAI local images fixed.
 - README rewritten to say what runs and what is simulated.
 - `.gitignore` covers every `.env*` file except `.env.example`.
+- `yt/requirements.txt` uses `opencv-python-headless`, so the tool imports on servers without libGL.
 
 ### Removed
 

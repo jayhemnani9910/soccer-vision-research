@@ -12,7 +12,6 @@ from typing import List, Optional, Dict, Any, Tuple
 from pathlib import Path
 
 import yt_dlp
-import requests
 
 # Optional LLM backends
 try:

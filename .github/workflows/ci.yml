@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff==0.17.4
+      # Syntax errors and undefined names only. The full default rule set reports ~420 style findings.
+      - run: ruff check --select E9,F63,F7,F82 .
+
+  yt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: pip install --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple -r yt/requirements.txt
+      - name: Smoke
+        working-directory: yt
+        run: |
+          python query_video.py --help
+          python -c "import analyze_youtube_vlm as a; print(a.extract_frames.__name__)"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: pip install --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple -e package/soccer_player_recognition pytest psutil
+      - name: Test
+        working-directory: package/soccer_player_recognition
+        run: python -m pytest tests -q -p no:cacheprovider

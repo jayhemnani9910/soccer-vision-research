@@ -24,7 +24,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
-import seaborn as sns
 
 from .logger import get_logger
 
@@ -414,6 +413,7 @@ class ResNetFeatureExtractor:
         try:
             if features.dim() == 2:
                 # 2D features - show as heatmap
+                import seaborn as sns  # optional "visualization" extra
                 feature_map = features.cpu().numpy()
                 
                 plt.figure(figsize=(10, 6))
@@ -824,6 +824,7 @@ class ResNetModelEvaluator:
             Confusion matrix image
         """
         try:
+            import seaborn as sns  # optional "visualization" extra
             cm = confusion_matrix(targets, predictions)
             
             plt.figure(figsize=(8, 6))
@@ -906,6 +907,27 @@ class ResNetModelEvaluator:
             logger.error(f"Error plotting training history: {e}")
             return np.zeros((300, 800, 3), dtype=np.uint8)
 
+
+
+class ResNetUtils:
+    """Single-image ResNet pre- and post-processing."""
+    
+    def __init__(self, preprocessor: Optional[ResNetPreprocessor] = None):
+        self.preprocessor = preprocessor or ResNetPreprocessor()
+    
+    def preprocess_image(self, image: np.ndarray) -> torch.Tensor:
+        """BGR image to a normalized 1x3xHxW tensor."""
+        return self.preprocessor.preprocess_image(image).unsqueeze(0)
+    
+    def postprocess_output(self, logits: torch.Tensor, top_k: int = 5) -> Dict[str, Any]:
+        """Softmax over the first row of logits; return the top class and the top_k list."""
+        probabilities = torch.softmax(logits.detach().float().reshape(logits.shape[0], -1)[0], dim=0)
+        top_probs, top_ids = probabilities.topk(min(top_k, probabilities.numel()))
+        return {
+            'predicted_class': int(top_ids[0]),
+            'confidence': float(top_probs[0]),
+            'top_k': [(int(i), float(p)) for i, p in zip(top_ids, top_probs)]
+        }
 
 # Utility functions
 def load_and_preprocess_image(image_path: str, 

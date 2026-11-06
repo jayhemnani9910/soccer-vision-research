@@ -420,6 +420,78 @@ class Visualizer:
         return result_image
 
 
+
+class DrawUtils(Visualizer):
+    """Visualizer that takes detections, keypoints and tracks as dicts."""
+    
+    def draw_bounding_boxes(self, image: np.ndarray, boxes: List[Dict[str, Any]],
+                            thickness: int = 2) -> np.ndarray:
+        """Draw boxes given as dicts with x1, y1, x2, y2 and optional label, confidence."""
+        result = image.copy()
+        for box in boxes:
+            x1, y1, x2, y2 = (int(box[k]) for k in ('x1', 'y1', 'x2', 'y2'))
+            label = box.get('label', '')
+            if 'confidence' in box:
+                label = f"{label} {box['confidence']:.2f}".strip()
+            color = self.default_colors.get(box.get('label'), self.default_colors['unknown'])
+            result = self.draw_bounding_box(result, (x1, y1, x2 - x1, y2 - y1), label,
+                                            color, thickness)
+        return result
+    
+    def draw_segmentation_mask(self, image: np.ndarray, mask: np.ndarray,
+                               alpha: float = 0.5,
+                               color: Tuple[int, int, int] = (0, 255, 0)) -> np.ndarray:
+        """Blend color into the pixels where mask is non-zero."""
+        result = image.copy()
+        region = mask.astype(bool)
+        overlay = np.zeros_like(image)
+        overlay[:] = color
+        result[region] = cv2.addWeighted(image, 1 - alpha, overlay, alpha, 0)[region]
+        return result
+    
+    def draw_keypoints(self, image: np.ndarray, keypoints: List[Any], *args, **kwargs) -> np.ndarray:
+        """Like Visualizer.draw_keypoints, also accepting {'x': .., 'y': ..} dicts."""
+        points = [(kp['x'], kp['y']) if isinstance(kp, dict) else kp for kp in keypoints]
+        return super().draw_keypoints(image, points, *args, **kwargs)
+    
+    def draw_tracks(self, image: np.ndarray, tracks: List[Dict[str, Any]],
+                    color: Tuple[int, int, int] = (255, 255, 0)) -> np.ndarray:
+        """Draw each track's bbox [x1, y1, x2, y2], id and position history."""
+        result = image.copy()
+        for track in tracks:
+            if 'bbox' in track:
+                x1, y1, x2, y2 = map(int, track['bbox'])
+                result = self.draw_bounding_box(result, (x1, y1, x2 - x1, y2 - y1),
+                                                f"ID {track.get('id', '')}".strip(), color)
+            result = self.draw_track(result, track.get('history', []), color)
+        return result
+    
+    def add_text_overlay(self, image: np.ndarray, text: Union[str, List[str]],
+                         position: Union[str, Tuple[int, int]] = 'top', **kwargs) -> np.ndarray:
+        """Add one or more lines of text at (x, y), or stacked at the 'top' or 'bottom'."""
+        lines = [text] if isinstance(text, str) else list(text)
+        if not isinstance(position, str):
+            result = image
+            x, y = position
+            for i, line in enumerate(lines):
+                result = super().add_text_overlay(result, line, (x, y + i * 30), **kwargs)
+            return result
+        if position not in ('top', 'bottom'):
+            raise ValueError(f"Invalid text position: {position}")
+        
+        font_scale = kwargs.get('font_scale', 0.6)
+        thickness = kwargs.get('thickness', 1)
+        line_height = cv2.getTextSize('Ag', cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0][1] + 10
+        y = line_height if position == 'top' else image.shape[0] - line_height * (len(lines) - 1) - 10
+        
+        result = image
+        for i, line in enumerate(lines):
+            result = super().add_text_overlay(result, line, (10, y + i * line_height),
+                                              font_scale=font_scale, thickness=thickness,
+                                              **{k: v for k, v in kwargs.items()
+                                                 if k not in ('font_scale', 'thickness')})
+        return result
+
 def create_confusion_matrix_visualization(confusion_matrix: np.ndarray,
                                         class_names: List[str],
                                         title: str = "Confusion Matrix",

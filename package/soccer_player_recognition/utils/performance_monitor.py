@@ -5,7 +5,9 @@ Provides functionality for tracking and analyzing model performance metrics
 including mAP, FPS, precision, recall, and other evaluation metrics.
 """
 
+import gc
 import time
+from contextlib import contextmanager
 import numpy as np
 import torch
 from typing import Dict, List, Optional, Any, Tuple, Union
@@ -29,6 +31,15 @@ class MetricsSnapshot:
     metric_value: float
     model_id: str
     additional_data: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class OperationMeasurement:
+    """Timing and process memory (MB) for one measured operation."""
+    operation: str
+    execution_time: float = 0.0
+    memory_usage: float = 0.0
+    peak_memory: float = 0.0
 
 
 @dataclass
@@ -89,6 +100,9 @@ class PerformanceMonitor:
         
         # Resource monitoring
         self.resource_history: Dict[str, deque] = defaultdict(lambda: deque(maxlen=max_history))
+        
+        import psutil
+        self.process = psutil.Process()
         
         logger.info(f"PerformanceMonitor initialized with output_dir: {self.output_dir}")
     
@@ -548,6 +562,44 @@ class PerformanceMonitor:
         key = f"{model_id}_{metric_name}"
         with self._lock:
             return list(self.metrics_history[key])
+    
+    def get_memory_usage(self) -> float:
+        """Resident memory of this process in MB."""
+        return self.process.memory_info().rss / 1024 / 1024
+    
+    def get_cpu_usage(self) -> float:
+        """CPU usage of this process since the last call, in percent of one core."""
+        return float(self.process.cpu_percent())
+    
+    def get_gpu_usage(self) -> float:
+        """GPU utilization in percent, or 0.0 when no GPU or NVML is available."""
+        if not torch.cuda.is_available():
+            return 0.0
+        utilization = self._get_gpu_utilization()
+        return float(utilization) if utilization is not None else 0.0
+    
+    def clear_cache(self) -> None:
+        """Run garbage collection and release cached GPU memory."""
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    
+    @contextmanager
+    def measure_operation(self, operation: str):
+        """Time a block and record process memory after it.
+        
+        peak_memory is the larger of the memory before and after the block,
+        not a sampled peak.
+        """
+        measurement = OperationMeasurement(operation=operation)
+        memory_before = self.get_memory_usage()
+        start = time.perf_counter()
+        try:
+            yield measurement
+        finally:
+            measurement.execution_time = time.perf_counter() - start
+            measurement.memory_usage = self.get_memory_usage()
+            measurement.peak_memory = max(memory_before, measurement.memory_usage)
     
     def reset_model_metrics(self, model_id: str) -> None:
         """

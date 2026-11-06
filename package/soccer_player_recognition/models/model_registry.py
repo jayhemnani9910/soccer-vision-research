@@ -57,18 +57,25 @@ class ModelRegistry:
         model_id: str,
         model_type: ModelType,
         model_path: str,
-        config_path: str,
-        metadata: Optional[Dict[str, Any]] = None
+        config_path: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        config: Optional[Dict[str, Any]] = None,
+        is_active: bool = True
     ) -> bool:
         """
         Register a new model in the registry.
+        
+        The model file is not checked here; loading reports a missing file.
+        Use validate_registry() to check paths up front.
         
         Args:
             model_id: Unique identifier for the model
             model_type: Type of the model
             model_path: Path to the model file
-            config_path: Path to the model configuration
+            config_path: Path to a JSON model configuration file
             metadata: Additional model metadata
+            config: Model configuration given inline (used instead of config_path)
+            is_active: Whether the model can be loaded
             
         Returns:
             bool: True if registration successful, False otherwise
@@ -77,12 +84,7 @@ class ModelRegistry:
             logger.error(f"Invalid model type: {model_type.value}")
             return False
         
-        # Validate paths exist
-        if not os.path.exists(model_path):
-            logger.error(f"Model file not found: {model_path}")
-            return False
-        
-        if not os.path.exists(config_path):
+        if config_path is not None and not os.path.exists(config_path):
             logger.error(f"Config file not found: {config_path}")
             return False
         
@@ -92,9 +94,10 @@ class ModelRegistry:
             "model_type": model_type.value,
             "model_path": model_path,
             "config_path": config_path,
+            "config": dict(config or {}),
             "metadata": dict(metadata or {}),
             "registered_at": self._get_timestamp(),
-            "is_active": True
+            "is_active": is_active
         }
         
         self.models[model_id] = model_entry
@@ -274,7 +277,7 @@ class ModelRegistry:
         
         for model_id, model_info in self.models.items():
             # Check required fields
-            required_fields = ["model_id", "model_type", "model_path", "config_path"]
+            required_fields = ["model_id", "model_type", "model_path"]
             for field in required_fields:
                 if field not in model_info:
                     errors.append(f"Model {model_id}: Missing required field '{field}'")
@@ -284,7 +287,7 @@ class ModelRegistry:
                 if not os.path.exists(model_info["model_path"]):
                     errors.append(f"Model {model_id}: Model file not found: {model_info['model_path']}")
             
-            if "config_path" in model_info:
+            if model_info.get("config_path"):
                 if not os.path.exists(model_info["config_path"]):
                     errors.append(f"Model {model_id}: Config file not found: {model_info['config_path']}")
             

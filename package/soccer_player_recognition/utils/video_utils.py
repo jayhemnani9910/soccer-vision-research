@@ -28,7 +28,8 @@ class VideoProcessor:
     def extract_frames(self, video_path: str, 
                       start_time: Optional[float] = None,
                       end_time: Optional[float] = None,
-                      sample_rate: int = 1) -> List[np.ndarray]:
+                      sample_rate: int = 1,
+                      max_frames: Optional[int] = None) -> List[np.ndarray]:
         """
         Extract frames from video.
         
@@ -37,6 +38,7 @@ class VideoProcessor:
             start_time: Start time in seconds
             end_time: End time in seconds
             sample_rate: Extract every nth frame
+            max_frames: Stop after this many frames
             
         Returns:
             List of extracted frames
@@ -77,6 +79,8 @@ class VideoProcessor:
             
             if frame_count % sample_rate == 0:
                 frames.append(frame)
+                if max_frames is not None and len(frames) >= max_frames:
+                    break
             
             frame_count += 1
         
@@ -259,6 +263,34 @@ class VideoProcessor:
         
         return enhanced
 
+
+
+class VideoUtils(VideoProcessor):
+    """VideoProcessor plus whole-video helpers."""
+    
+    def load_video(self, video_path: str) -> Dict[str, Any]:
+        """Read every frame of a video. Returns its info plus a 'frames' list."""
+        video = self.get_video_info(video_path)
+        video['path'] = str(video_path)
+        video['frames'] = self.extract_frames(video_path)
+        return video
+    
+    def process_video(self, video_path: str, output_path: str,
+                      target_fps: Optional[float] = None) -> Dict[str, Any]:
+        """Re-encode a video at target_fps by keeping every nth frame."""
+        target_fps = target_fps or self.target_fps
+        source_fps = self.get_video_info(video_path)['fps'] or target_fps
+        step = max(1, int(round(source_fps / target_fps)))
+        
+        frames = self.extract_frames(video_path, sample_rate=step)
+        self.create_video(frames, output_path, fps=target_fps)
+        
+        return {
+            'output_path': str(output_path),
+            'source_fps': source_fps,
+            'output_fps': target_fps,
+            'frames_written': len(frames)
+        }
 
 def load_video_frames(video_path: str, 
                      frame_processor: Optional[VideoProcessor] = None,

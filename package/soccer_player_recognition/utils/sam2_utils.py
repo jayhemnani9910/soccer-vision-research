@@ -692,6 +692,29 @@ class DataLoader:
         return prompts
 
 
+
+class SAM2Utils:
+    """Point-prompted mask generation through a SAM2-style predictor.
+    
+    predictor is any callable (image, points) -> mask. This package ships no
+    trained SAM2 weights, so without a predictor generate_mask returns None.
+    """
+    
+    def __init__(self, predictor: Optional[Any] = None, mask_threshold: float = 0.5):
+        self.predictor = predictor
+        self.mask_threshold = mask_threshold
+    
+    def generate_mask(self, image: np.ndarray, points: np.ndarray) -> Optional[np.ndarray]:
+        """Return a uint8 HxW mask for the given (x, y) prompt points, or None."""
+        if self.predictor is None:
+            logger.warning("SAM2Utils has no predictor; no mask generated")
+            return None
+        mask = self.predictor(image, points)
+        if isinstance(mask, torch.Tensor):
+            mask = mask.detach().cpu().numpy()
+        mask = np.squeeze(np.asarray(mask))
+        return (mask > self.mask_threshold).astype(np.uint8)
+
 def save_results_to_json(results: Dict[str, Any], output_path: Union[str, Path]) -> None:
     """Save results to JSON file"""
     # Convert numpy/torch types to Python types for JSON serialization

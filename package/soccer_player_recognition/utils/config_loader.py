@@ -148,7 +148,12 @@ class ConfigLoader:
         Returns:
             Model configuration dictionary
         """
-        return self.model_configs.get(model_name, {})
+        return self._model_sections().get(model_name, {})
+    
+    def _model_sections(self) -> Dict[str, Any]:
+        """Model entries, either under a top-level 'models' key or at the top level."""
+        models = self.model_configs.get('models')
+        return models if isinstance(models, dict) else self.model_configs
     
     def get_all_configs(self) -> Dict[str, Any]:
         """
@@ -248,13 +253,14 @@ class ConfigLoader:
         
         # Check model configurations
         required_models = ['rf_detr', 'sam2', 'siglip', 'resnet']
+        model_sections = self._model_sections()
         for model_name in required_models:
-            if model_name not in self.model_configs:
+            if model_name not in model_sections:
                 validation_results['errors'].append(
                     f"Missing configuration for model: {model_name}"
                 )
             else:
-                model_config = self.model_configs[model_name]
+                model_config = model_sections[model_name]
                 if 'model_path' not in model_config:
                     validation_results['warnings'].append(
                         f"Model path not specified for: {model_name}"

@@ -69,6 +69,10 @@ python -m pytest tests -q -p no:cacheprovider
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## License
+
+Copyright (C) 2026 Jay Hemnani. Licensed under the [GNU AGPL v3.0](LICENSE), because the package depends on [Ultralytics](https://github.com/ultralytics/ultralytics), which is AGPL-3.0.
+
 ## Credits
 
 The demo GIF uses frames from "Match de football France-Allemagne - 16 octobre 2018 - Phase de jeu (1)" by Like tears in rain, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Match_de_football_France-Allemagne_-_16_octobre_2018_-_Phase_de_jeu_(1).ogv), CC BY-SA 4.0. The GIF is shared under the same license.

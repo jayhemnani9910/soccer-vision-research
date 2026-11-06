@@ -18,13 +18,13 @@ Example usage:
 
 Author: AI Development Team
 Version: 1.0.0
-License: MIT
+License: AGPL-3.0
 """
 
 __version__ = "1.0.0"
 __author__ = "AI Development Team"
 __email__ = "ai@example.com"
-__license__ = "MIT"
+__license__ = "AGPL-3.0"
 
 # Import main classes (only modules that exist in this package)
 from .core import PlayerRecognizer

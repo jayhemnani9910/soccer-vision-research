@@ -2,7 +2,7 @@
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](../../LICENSE)
 
 An advanced computer vision system for soccer player recognition, tracking, and analysis using deep learning techniques. This system provides comprehensive capabilities for player detection, identification, classification, and real-time tracking from video streams.
 
@@ -351,7 +351,7 @@ recognizer.enable_quantization()  # For mobile deployment
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU AGPL v3.0 - see the [LICENSE](../../LICENSE) file for details.
 
 ## Acknowledgments
 

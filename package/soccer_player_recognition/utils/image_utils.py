@@ -312,6 +312,84 @@ class ImageProcessor:
         return stats
 
 
+
+class ImageUtils:
+    """Simple image helpers: load, resize, scale, tensor conversion, augmentation.
+    
+    Images are HWC numpy arrays (BGR, as loaded by OpenCV). Tensors are NCHW.
+    """
+    
+    def __init__(self):
+        self._processor = ImageProcessor()
+    
+    def load_image(self, image_path: Union[str, Path]) -> np.ndarray:
+        """Load an image as a BGR numpy array."""
+        return self._processor.load_image(image_path)
+    
+    def resize_image(self, image: np.ndarray, target_size: Tuple[int, int]) -> np.ndarray:
+        """Resize to exactly target_size (width, height), ignoring aspect ratio."""
+        return cv2.resize(image, tuple(target_size), interpolation=cv2.INTER_AREA)
+    
+    def normalize_image(self, image: np.ndarray,
+                        range_: Tuple[float, float] = (0.0, 1.0)) -> np.ndarray:
+        """Scale 0-255 pixel values linearly into range_ as float32."""
+        low, high = range_
+        return image.astype(np.float32) / 255.0 * (high - low) + low
+    
+    def image_to_tensor(self, image: np.ndarray) -> torch.Tensor:
+        """HWC array to a float 1xCxHxW tensor. Values are not rescaled."""
+        tensor = torch.from_numpy(np.ascontiguousarray(image)).float()
+        if tensor.dim() == 2:
+            tensor = tensor.unsqueeze(-1)
+        return tensor.permute(2, 0, 1).unsqueeze(0)
+    
+    def tensor_to_image(self, tensor: torch.Tensor) -> np.ndarray:
+        """CxHxW or 1xCxHxW tensor to an HWC array.
+        
+        Float tensors are read as 0-1 values, clipped and scaled to uint8.
+        """
+        tensor = tensor.detach().cpu()
+        if tensor.dim() == 4:
+            tensor = tensor[0]
+        image = tensor.permute(1, 2, 0).numpy()
+        if np.issubdtype(image.dtype, np.floating):
+            image = (np.clip(image, 0.0, 1.0) * 255).astype(np.uint8)
+        return image
+    
+    def preprocess_image(self, image: np.ndarray,
+                         target_size: Tuple[int, int] = (224, 224),
+                         normalize: bool = True,
+                         to_tensor: bool = True) -> Union[np.ndarray, torch.Tensor]:
+        """Resize, optionally scale to 0-1, optionally convert to a 1xCxHxW tensor."""
+        processed = self.resize_image(image, target_size)
+        if normalize:
+            processed = self.normalize_image(processed)
+        if to_tensor:
+            processed = self.image_to_tensor(processed)
+        return processed
+    
+    def augment_image(self, image: np.ndarray,
+                      flip_horizontal: bool = False,
+                      flip_vertical: bool = False,
+                      rotate: float = 0.0,
+                      brightness: float = 0.0,
+                      contrast: float = 0.0) -> np.ndarray:
+        """Apply the requested augmentations; the output keeps the input shape.
+        
+        brightness shifts pixels by brightness * 255; contrast scales them by 1 + contrast.
+        """
+        result = image.copy()
+        if flip_horizontal:
+            result = self._processor.flip_image(result, 'horizontal')
+        if flip_vertical:
+            result = self._processor.flip_image(result, 'vertical')
+        if rotate:
+            result = self._processor.rotate_image(result, rotate)
+        if brightness or contrast:
+            adjusted = result.astype(np.float32) * (1.0 + contrast) + brightness * 255.0
+            result = np.clip(adjusted, 0, 255).astype(image.dtype)
+        return result
+
 def create_torch_tensor(image: np.ndarray, 
                        target_size: Optional[Tuple[int, int]] = None,
                        normalize: bool = True,

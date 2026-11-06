@@ -72,6 +72,9 @@ wget-log
 outputs/
 vlm_outputs/
 
+# Written by ModelRegistry() in the working directory
+**/models/registry.json
+
 # Database
 *.db
 *.sqlite

@@ -5,6 +5,7 @@ Provides functionality for loading, managing, and using different types of model
 including detection, classification, identification, and segmentation models.
 """
 
+import gc
 import os
 import torch
 import numpy as np
@@ -50,6 +51,7 @@ class ModelInstance:
         self.load_time = 0
         self.inference_count = 0
         self.total_inference_time = 0
+        self.last_used = 0.0
         self._lock = threading.Lock()
         
         logger.info(f"Created ModelInstance for {model_id}")
@@ -84,6 +86,7 @@ class ModelInstance:
                 self.model = self._load_by_type()
                 self.is_loaded = True
                 self.load_time = time.time() - start_time
+                self.last_used = time.time()
                 
                 logger.info(f"Model {self.model_id} loaded successfully in {self.load_time:.2f}s")
                 return True
@@ -114,13 +117,18 @@ class ModelInstance:
         # Example implementation for YOLO
         try:
             import ultralytics
-            model = ultralytics.YOLO(self.model_path)
-            model.to(self.device)
-            return model
         except ImportError:
-            # Fallback for other detection frameworks
             logger.warning(f"Ultralytics not available, using generic loader for {self.model_path}")
             return self._load_generic_model()
+        
+        try:
+            model = ultralytics.YOLO(self.model_path)
+        except Exception as e:
+            # Not an Ultralytics checkpoint, e.g. a plain pickled torch module
+            logger.warning(f"Not a YOLO checkpoint ({e}), using generic loader for {self.model_path}")
+            return self._load_generic_model()
+        model.to(self.device)
+        return model
     
     def _load_classification_model(self) -> Any:
         """Load classification model (e.g., ResNet, EfficientNet)."""
@@ -200,6 +208,7 @@ class ModelInstance:
             with self._lock:
                 self.inference_count += 1
                 self.total_inference_time += inference_time
+                self.last_used = time.time()
             
             return result
             
@@ -236,13 +245,23 @@ class ModelInstance:
                 'raw_results': results
             }
         else:
-            # Generic inference
+            # Generic torch module: each output row is read as
+            # [x1, y1, x2, y2, score, class logits...]. Values are plain lists.
             with torch.no_grad():
                 if isinstance(input_data, np.ndarray):
                     input_data = torch.from_numpy(input_data).float()
                 input_data = input_data.to(self.device)
-                outputs = self.model(input_data)
-                return {'output': outputs}
+                outputs = self.model(input_data).cpu()
+            
+            result = {'output': outputs.tolist()}
+            if outputs.dim() >= 2 and outputs.shape[-1] >= 4:
+                rows = outputs.reshape(-1, outputs.shape[-1])
+                result['boxes'] = rows[:, :4].tolist()
+                if rows.shape[1] > 4:
+                    result['scores'] = rows[:, 4].tolist()
+                if rows.shape[1] > 5:
+                    result['classes'] = rows[:, 5:].argmax(dim=1).tolist()
+            return result
     
     def _predict_classification(self, input_data: Any, **kwargs) -> Dict[str, Any]:
         """Perform classification inference."""
@@ -299,6 +318,17 @@ class ModelInstance:
     
     def _predict_pose(self, input_data: Any, **kwargs) -> Dict[str, Any]:
         """Perform pose estimation inference."""
+        if isinstance(input_data, (str, Path)):
+            import cv2
+            image = cv2.imread(str(input_data))
+            if image is None:
+                raise ValueError(f"Cannot load image: {input_data}")
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            if hasattr(self.model, 'process'):
+                input_data = image
+            else:
+                input_data = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0).float() / 255.0
+        
         if hasattr(self.model, 'process'):
             # MediaPipe model
             results = self.model.process(input_data)
@@ -358,6 +388,7 @@ class ModelInstance:
                     self.is_loaded = False
                     
                     # Force garbage collection
+                    gc.collect()
                     if torch.cuda.is_available():
                         torch.cuda.empty_cache()
                     
@@ -436,7 +467,10 @@ class ModelManager:
         
         # Create model instance
         try:
-            config = self._load_model_config(model_info["config_path"])
+            if model_info.get("config_path"):
+                config = self._load_model_config(model_info["config_path"])
+            else:
+                config = dict(model_info.get("config") or {})
             model_instance = ModelInstance(
                 model_id=model_id,
                 model_path=model_info["model_path"],
@@ -450,7 +484,14 @@ class ModelManager:
                 # Add to instances
                 if model_id in self.model_instances:
                     # Remove old instance
-                    self.model_instances[model_id].unload_model()
+                    self.unload_model(model_id)
+                
+                # Make room by unloading least recently used models
+                while len(self.model_instances) >= self.max_loaded_models:
+                    lru_id = min(self.model_instances,
+                                 key=lambda mid: self.model_instances[mid].last_used)
+                    logger.info(f"Unloading least recently used model {lru_id}")
+                    self.unload_model(lru_id)
                 
                 self.model_instances[model_id] = model_instance
                 self.global_stats['total_models_loaded'] += 1
@@ -515,6 +556,9 @@ class ModelManager:
             Dictionary containing prediction results
         """
         model_instance = self.model_instances.get(model_id)
+        
+        if not model_instance and not self.registry.get_model_info(model_id):
+            raise ValueError(f"Model {model_id} is not registered")
         
         if not model_instance and auto_load:
             logger.info(f"Auto-loading model {model_id}")
@@ -594,30 +638,28 @@ class ModelManager:
     
     def cleanup_memory(self) -> int:
         """
-        Cleanup memory by unloading least recently used models.
+        Cleanup memory by unloading models.
+        
+        Unloads every model that has not run a prediction since it was loaded,
+        then least recently used models until at most max_loaded_models remain.
         
         Returns:
             int: Number of models unloaded
         """
         unloaded_count = 0
         
-        if len(self.model_instances) > self.max_loaded_models:
-            # Sort models by last inference time (simple LRU)
-            model_times = []
-            for model_id, instance in self.model_instances.items():
-                last_inference_time = instance.total_inference_time / max(instance.inference_count, 1)
-                model_times.append((model_id, last_inference_time))
-            
-            # Sort by last inference time (ascending - least recently used first)
-            model_times.sort(key=lambda x: x[1])
-            
-            # Unload models until under threshold
-            for model_id, _ in model_times:
-                if len(self.model_instances) <= self.max_loaded_models:
-                    break
-                
-                if self.unload_model(model_id):
-                    unloaded_count += 1
+        for model_id in [mid for mid, inst in self.model_instances.items()
+                         if inst.inference_count == 0]:
+            if self.unload_model(model_id):
+                unloaded_count += 1
+        
+        by_last_use = sorted(self.model_instances,
+                             key=lambda mid: self.model_instances[mid].last_used)
+        for model_id in by_last_use:
+            if len(self.model_instances) <= self.max_loaded_models:
+                break
+            if self.unload_model(model_id):
+                unloaded_count += 1
         
         if torch.cuda.is_available():
             torch.cuda.empty_cache()

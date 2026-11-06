@@ -338,7 +338,9 @@ class TestInferencePerformance(BenchmarkTestCase):
         
         for model_type, input_shape in models:
             for device in devices:
-                model_path = self._create_mock_model(model_type, "medium")
+                # The identification input is a (1, 512) feature vector, not an image
+                complexity = "simple" if model_type == ModelType.IDENTIFICATION else "medium"
+                model_path = self._create_mock_model(model_type, complexity)
                 
                 instance = ModelInstance(
                     model_id=f"test_{model_type.value}",
@@ -436,7 +438,8 @@ class TestInferencePerformance(BenchmarkTestCase):
         model_type = ModelType.CLASSIFICATION
         
         for i in range(10):
-            model_path = self._create_mock_model(model_type, "simple")
+            # Image input, so the image ("medium") mock
+            model_path = self._create_mock_model(model_type, "medium")
             
             instance = ModelInstance(
                 model_id=f"memory_test_{i}",
@@ -578,6 +581,8 @@ class TestBatchProcessingPerformance(BenchmarkTestCase):
             test_input = torch.randn(batch_size, 3, 224, 224)
             instance.predict(test_input)
             instance.unload_model()
+            # The input belongs to the test, not the model; free it before measuring
+            del test_input
             
             # Memory after
             memory_after = self.monitor.get_memory_usage()
@@ -586,8 +591,11 @@ class TestBatchProcessingPerformance(BenchmarkTestCase):
             memory_usage[batch_size] = memory_diff
             logger.info(f"Batch size {batch_size}: Memory usage: {memory_diff:.2f}MB")
         
-        # Assert memory usage scales reasonably
-        self.assertLess(memory_usage[64], memory_usage[1] * 100, 
+        # Per-sample growth at batch 64 must stay below per-sample growth at batch 8.
+        # RSS deltas this small are noise (often 0 or negative), so the batch 8
+        # baseline is floored at 1 MB.
+        baseline_per_sample = max(memory_usage[8], 1.0) / 8
+        self.assertLess(memory_usage[64] / 64, baseline_per_sample,
                        "Memory usage should not scale linearly with batch size")
 
 

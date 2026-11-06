@@ -59,6 +59,7 @@ setup(
         "matplotlib>=3.7.0",
         "tqdm>=4.65.0",
         "pyyaml>=6.0",
+        "psutil>=5.9.0",
         "ultralytics>=8.0.0",
         "albumentations>=1.3.0",
         "timm>=0.9.0",

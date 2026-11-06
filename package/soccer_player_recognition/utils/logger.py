@@ -327,6 +327,52 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     return global_logger.get_logger(name)
 
 
+
+def setup_logger(name: str = 'soccer_player_recognition',
+                 log_level: Union[int, str] = logging.INFO,
+                 log_file: Optional[str] = None,
+                 console_output: bool = True,
+                 format: Optional[str] = None,
+                 date_format: Optional[str] = None) -> logging.Logger:
+    """
+    Configure and return a named logger, independent of the global logger.
+    
+    Args:
+        name: Logger name
+        log_level: Logging level
+        log_file: Optional file to also write to
+        console_output: Whether to log to stdout
+        format: Message format string
+        date_format: Date format for %(asctime)s
+        
+    Returns:
+        Configured logger
+    """
+    if isinstance(log_level, str):
+        log_level = getattr(logging, log_level.upper())
+    
+    named_logger = logging.getLogger(name)
+    named_logger.setLevel(log_level)
+    for handler in list(named_logger.handlers):
+        named_logger.removeHandler(handler)
+        handler.close()
+    
+    formatter = logging.Formatter(
+        format or '%(asctime)s - %(name)s - %(levelname)s - %(message)s', date_format)
+    
+    handlers = []
+    if console_output:
+        handlers.append(logging.StreamHandler(sys.stdout))
+    if log_file:
+        Path(log_file).parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_file))
+    for handler in handlers:
+        handler.setLevel(log_level)
+        handler.setFormatter(formatter)
+        named_logger.addHandler(handler)
+    
+    return named_logger
+
 def setup_logging(**kwargs) -> logging.Logger:
     """
     Setup global logging configuration.

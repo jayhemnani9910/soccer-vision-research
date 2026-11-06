@@ -420,6 +420,38 @@ class RFDETRPostprocessor:
         return output
 
 
+
+class RF_DETRUtils:
+    """RF-DETR pre- and post-processing with a default config."""
+    
+    def __init__(self, config: Optional[RFDETRConfig] = None):
+        if config is None:
+            from models.detection.rf_detr_config import RFDETRConfig
+            config = RFDETRConfig()
+        self.preprocessor = RFDETRPreprocessor(config)
+        self.postprocessor = RFDETRPostprocessor(config)
+        width, height = config.input_size
+        # Identity scaling until an image has been preprocessed
+        self.image_info = {
+            'original_width': width, 'original_height': height,
+            'target_width': width, 'target_height': height,
+            'scale_x': 1.0, 'scale_y': 1.0
+        }
+    
+    def preprocess_image(self, image: np.ndarray) -> torch.Tensor:
+        """Preprocess an image and remember its size for postprocess_output."""
+        self.image_info = self.preprocessor.get_image_info(image)
+        return self.preprocessor.preprocess_image(image)
+    
+    def postprocess_output(self, output: Dict[str, torch.Tensor]) -> List[Dict]:
+        """Turn {'boxes', 'scores', 'classes'} tensors into filtered detection dicts."""
+        predictions = torch.cat([
+            output['boxes'].float().reshape(-1, 4),
+            output['scores'].float().reshape(-1, 1),
+            output['classes'].float().reshape(-1, 1)
+        ], dim=1)
+        return self.postprocessor.process_predictions(predictions, self.image_info)
+
 # Utility functions for common operations
 def preprocess_for_soccer_detection(image: np.ndarray, config: RFDETRConfig) -> Tuple[torch.Tensor, Dict]:
     """

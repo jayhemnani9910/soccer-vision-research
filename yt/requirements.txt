@@ -5,7 +5,7 @@ torchaudio
 transformers
 accelerate
 yt-dlp
-opencv-python
+opencv-python-headless
 openai
 pillow
 numpy

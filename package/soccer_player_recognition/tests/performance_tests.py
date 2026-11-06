@@ -338,7 +338,9 @@ class TestInferencePerformance(BenchmarkTestCase):
         
         for model_type, input_shape in models:
             for device in devices:
-                model_path = self._create_mock_model(model_type, "medium")
+                # The identification input is a (1, 512) feature vector, not an image
+                complexity = "simple" if model_type == ModelType.IDENTIFICATION else "medium"
+                model_path = self._create_mock_model(model_type, complexity)
                 
                 instance = ModelInstance(
                     model_id=f"test_{model_type.value}",
@@ -436,7 +438,8 @@ class TestInferencePerformance(BenchmarkTestCase):
         model_type = ModelType.CLASSIFICATION
         
         for i in range(10):
-            model_path = self._create_mock_model(model_type, "simple")
+            # Image input, so the image ("medium") mock
+            model_path = self._create_mock_model(model_type, "medium")
             
             instance = ModelInstance(
                 model_id=f"memory_test_{i}",

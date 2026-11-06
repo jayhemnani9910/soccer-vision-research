@@ -155,6 +155,62 @@ class IntegrationTestCase(unittest.TestCase):
             json.dump(video_metadata, f)
         
         self.video_metadata = video_metadata
+    
+    def _create_test_registry(self) -> ModelRegistry:
+        """Create a test registry with mock models."""
+        registry = ModelRegistry()
+        
+        # Create mock model files and register models
+        model_configs = [
+            ('test_detector', ModelType.DETECTION, 'test_detector.pt'),
+            ('test_classifier', ModelType.CLASSIFICATION, 'test_classifier.pt'),
+            ('test_segmenter', ModelType.SEGMENTATION, 'test_segmenter.pt'),
+            ('test_identifier', ModelType.IDENTIFICATION, 'test_identifier.pt')
+        ]
+        
+        for model_id, model_type, model_path in model_configs:
+            # Create actual model file
+            full_path = os.path.join(self.temp_dir, model_path)
+            mock_model = self._create_mock_model(model_type)
+            torch.save(mock_model, full_path)
+            
+            # Register model
+            registry.register_model(
+                model_id=model_id,
+                model_path=full_path,
+                model_type=model_type,
+                config={},
+                is_active=True
+            )
+        
+        return registry
+    
+    def _create_mock_model(self, model_type: ModelType):
+        """Create a mock model based on type."""
+        if model_type == ModelType.DETECTION:
+            return torch.nn.Sequential(
+                torch.nn.Conv2d(3, 64, 3, padding=1),
+                torch.nn.ReLU(),
+                torch.nn.AdaptiveAvgPool2d((1, 1)),
+                torch.nn.Flatten(),
+                torch.nn.Linear(64, 4)  # bounding box coordinates
+            )
+        elif model_type == ModelType.CLASSIFICATION:
+            return torch.nn.Sequential(
+                torch.nn.Conv2d(3, 64, 3, padding=1),
+                torch.nn.ReLU(),
+                torch.nn.AdaptiveAvgPool2d((1, 1)),
+                torch.nn.Flatten(),
+                torch.nn.Linear(64, 1000)
+            )
+        elif model_type == ModelType.SEGMENTATION:
+            return torch.nn.Conv2d(3, 1, 3, padding=1)
+        else:  # IDENTIFICATION
+            return torch.nn.Sequential(
+                torch.nn.Linear(512, 256),
+                torch.nn.ReLU(),
+                torch.nn.Linear(256, 128)
+            )
 
 
 class TestPipelineIntegration(IntegrationTestCase):
@@ -313,63 +369,6 @@ class TestPipelineIntegration(IntegrationTestCase):
         with self.assertRaises(ValueError):
             result = manager.predict('test_error_handling', torch.randn(1, 3, 224, 224), auto_load=False)
     
-    def _create_test_registry(self) -> ModelRegistry:
-        """Create a test registry with mock models."""
-        registry = ModelRegistry()
-        
-        # Create mock model files and register models
-        model_configs = [
-            ('test_detector', ModelType.DETECTION, 'test_detector.pt'),
-            ('test_classifier', ModelType.CLASSIFICATION, 'test_classifier.pt'),
-            ('test_segmenter', ModelType.SEGMENTATION, 'test_segmenter.pt'),
-            ('test_identifier', ModelType.IDENTIFICATION, 'test_identifier.pt')
-        ]
-        
-        for model_id, model_type, model_path in model_configs:
-            # Create actual model file
-            full_path = os.path.join(self.temp_dir, model_path)
-            mock_model = self._create_mock_model(model_type)
-            torch.save(mock_model, full_path)
-            
-            # Register model
-            registry.register_model(
-                model_id=model_id,
-                model_path=full_path,
-                model_type=model_type,
-                config={},
-                is_active=True
-            )
-        
-        return registry
-    
-    def _create_mock_model(self, model_type: ModelType):
-        """Create a mock model based on type."""
-        if model_type == ModelType.DETECTION:
-            return torch.nn.Sequential(
-                torch.nn.Conv2d(3, 64, 3, padding=1),
-                torch.nn.ReLU(),
-                torch.nn.AdaptiveAvgPool2d((1, 1)),
-                torch.nn.Flatten(),
-                torch.nn.Linear(64, 4)  # bounding box coordinates
-            )
-        elif model_type == ModelType.CLASSIFICATION:
-            return torch.nn.Sequential(
-                torch.nn.Conv2d(3, 64, 3, padding=1),
-                torch.nn.ReLU(),
-                torch.nn.AdaptiveAvgPool2d((1, 1)),
-                torch.nn.Flatten(),
-                torch.nn.Linear(64, 1000)
-            )
-        elif model_type == ModelType.SEGMENTATION:
-            return torch.nn.Conv2d(3, 1, 3, padding=1)
-        else:  # IDENTIFICATION
-            return torch.nn.Sequential(
-                torch.nn.Linear(512, 256),
-                torch.nn.ReLU(),
-                torch.nn.Linear(256, 128)
-            )
-
-
 class TestDataFlowIntegration(IntegrationTestCase):
     """Test data flow integration between components."""
     

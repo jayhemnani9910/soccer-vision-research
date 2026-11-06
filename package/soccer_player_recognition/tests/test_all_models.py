@@ -52,8 +52,8 @@ class TestModelInstances(unittest.TestCase):
         }
         
         # Create mock model files
-        for path in self.mock_model_paths.values():
-            self._create_mock_model_file(path)
+        for model_type, path in self.mock_model_paths.items():
+            self._create_mock_model_file(path, model_type)
     
     def tearDown(self):
         """Clean up test fixtures."""
@@ -68,14 +68,33 @@ class TestModelInstances(unittest.TestCase):
         cv2.imwrite(image_path, test_image)
         return image_path
     
-    def _create_mock_model_file(self, path: str):
-        """Create a mock model file."""
-        # Create a simple mock model
-        mock_model = torch.nn.Sequential(
-            torch.nn.Linear(784, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, 10)
-        )
+    def _create_mock_model_file(self, path: str, model_type: str = 'classification'):
+        """Create a mock model file that accepts the input used for its type below."""
+        if model_type == 'detection':
+            # (N, 3, H, W) image -> (N, 4) box
+            mock_model = torch.nn.Sequential(
+                torch.nn.Conv2d(3, 16, 3, padding=1),
+                torch.nn.AdaptiveAvgPool2d((1, 1)),
+                torch.nn.Flatten(),
+                torch.nn.Linear(16, 4)
+            )
+        elif model_type == 'identification':
+            # (N, 512) features -> (N, 128) embedding
+            mock_model = torch.nn.Sequential(
+                torch.nn.Linear(512, 256),
+                torch.nn.ReLU(),
+                torch.nn.Linear(256, 128)
+            )
+        elif model_type == 'segmentation':
+            # (N, 3, H, W) image -> (N, 1, H, W) mask logits
+            mock_model = torch.nn.Conv2d(3, 1, 3, padding=1)
+        else:
+            # (N, 784) -> (N, 10) class logits
+            mock_model = torch.nn.Sequential(
+                torch.nn.Linear(784, 256),
+                torch.nn.ReLU(),
+                torch.nn.Linear(256, 10)
+            )
         torch.save(mock_model, path)
     
     def test_model_instance_creation(self):
@@ -319,21 +338,29 @@ class TestModelManager(unittest.TestCase):
             'siglip': os.path.join(self.temp_dir, 'siglip.pt')
         }
         
-        for path in self.mock_model_paths.values():
-            self._create_mock_model_file(path)
+        for name, path in self.mock_model_paths.items():
+            self._create_mock_model_file(path, detection=(name == 'rf_detr'))
     
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
     
-    def _create_mock_model_file(self, path: str):
-        """Create a mock model file."""
-        mock_model = torch.nn.Sequential(
-            torch.nn.Linear(512, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, 128)
-        )
+    def _create_mock_model_file(self, path: str, detection: bool = False):
+        """Create a mock model file. The detection mock takes (N, 3, H, W) images."""
+        if detection:
+            mock_model = torch.nn.Sequential(
+                torch.nn.Conv2d(3, 16, 3, padding=1),
+                torch.nn.AdaptiveAvgPool2d((1, 1)),
+                torch.nn.Flatten(),
+                torch.nn.Linear(16, 4)
+            )
+        else:
+            mock_model = torch.nn.Sequential(
+                torch.nn.Linear(512, 256),
+                torch.nn.ReLU(),
+                torch.nn.Linear(256, 128)
+            )
         torch.save(mock_model, path)
     
     @patch('models.model_manager.ModelRegistry')
@@ -550,7 +577,12 @@ class TestModelTypes(unittest.TestCase):
         
         # Create temporary model file
         model_path = os.path.join(self.temp_dir, 'rf_detr_test.pt')
-        mock_model = torch.nn.Sequential(torch.nn.Linear(1, 1))
+        mock_model = torch.nn.Sequential(
+            torch.nn.Conv2d(3, 16, 3, padding=1),
+            torch.nn.AdaptiveAvgPool2d((1, 1)),
+            torch.nn.Flatten(),
+            torch.nn.Linear(16, 4)
+        )
         torch.save(mock_model, model_path)
         
         instance = ModelInstance(
@@ -629,6 +661,9 @@ class TestModelTypes(unittest.TestCase):
         # Create temporary model file
         model_path = os.path.join(self.temp_dir, 'siglip_test.pt')
         mock_model = torch.nn.Sequential(
+            torch.nn.Conv2d(3, 512, 16, stride=16),
+            torch.nn.AdaptiveAvgPool2d((1, 1)),
+            torch.nn.Flatten(),
             torch.nn.Linear(512, 256),
             torch.nn.ReLU(),
             torch.nn.Linear(256, 100)
@@ -656,7 +691,12 @@ class TestModelTypes(unittest.TestCase):
         
         # Create temporary model file
         model_path = os.path.join(self.temp_dir, 'pose_test.pt')
-        mock_model = torch.nn.Linear(1, 1)
+        mock_model = torch.nn.Sequential(
+            torch.nn.Conv2d(3, 8, 3, padding=1),
+            torch.nn.AdaptiveAvgPool2d((1, 1)),
+            torch.nn.Flatten(),
+            torch.nn.Linear(8, 33 * 3)  # 33 landmarks, (x, y, z)
+        )
         torch.save(mock_model, model_path)
         
         instance = ModelInstance(
